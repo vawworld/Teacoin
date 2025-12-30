@@ -94,36 +94,31 @@ export default function MyOrdersScreen() {
   };
 
   const confirmDelivery = async (order: Order) => {
-    Alert.alert(
-      'Confirm Delivery \u2615',
-      `Confirm you received "${order.item_name}"?\nThis will transfer 1 TeaCoin to ${order.seller_name}.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: async () => {
-            setActionLoading(order.order_id);
-            try {
-              const response = await fetch(
-                `${BACKEND_URL}/api/orders/${order.order_id}/confirm`,
-                { method: 'POST', headers: { Authorization: `Bearer ${sessionToken}` } }
-              );
-              if (response.ok) {
-                Alert.alert('Thank You! \ud83c\udf75', 'Delivery confirmed. TeaCoin sent to seller!');
-                loadOrders();
-              } else {
-                const error = await response.json();
-                Alert.alert('Error', error.detail || 'Failed to confirm delivery');
-              }
-            } catch (error) {
-              Alert.alert('Error', 'Failed to confirm delivery');
-            } finally {
-              setActionLoading(null);
-            }
-          },
-        },
-      ]
-    );
+    // Direct confirmation without dialog for better mobile compatibility
+    const price = order.price || 1;
+    setActionLoading(order.order_id);
+    try {
+      console.log('Confirming delivery for order:', order.order_id);
+      const response = await fetch(
+        `${BACKEND_URL}/api/orders/${order.order_id}/confirm`,
+        { method: 'POST', headers: { Authorization: `Bearer ${sessionToken}` } }
+      );
+      console.log('Confirm response status:', response.status);
+      
+      if (response.ok) {
+        Alert.alert('Thank You! ☕', `Delivery confirmed!\n${price} TeaCoin${price > 1 ? 's' : ''} sent to ${order.seller_name}.`);
+        loadOrders();
+      } else {
+        const error = await response.json();
+        console.log('Confirm error:', error);
+        Alert.alert('Error', error.detail || 'Failed to confirm delivery');
+      }
+    } catch (error) {
+      console.error('Confirm error:', error);
+      Alert.alert('Error', 'Failed to confirm delivery');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const cancelOrder = async (order: Order) => {
