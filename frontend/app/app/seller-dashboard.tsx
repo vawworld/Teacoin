@@ -19,6 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
+import { Audio } from 'expo-av';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
