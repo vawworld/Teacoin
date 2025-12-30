@@ -342,7 +342,7 @@ async def search_users(
     q: str,
     current_user: User = Depends(require_auth)
 ):
-    """Search users by profession or skills"""
+    """Search users by profession, skills, name, location, languages, interests, help offered/needed, or industry"""
     query_lower = q.lower().replace("#", "")
     
     users = await db.users.find(
@@ -350,7 +350,13 @@ async def search_users(
             "$or": [
                 {"profession": {"$regex": query_lower, "$options": "i"}},
                 {"skills": {"$regex": query_lower, "$options": "i"}},
-                {"name": {"$regex": query_lower, "$options": "i"}}
+                {"name": {"$regex": query_lower, "$options": "i"}},
+                {"location": {"$regex": query_lower, "$options": "i"}},
+                {"languages": {"$regex": query_lower, "$options": "i"}},
+                {"interests": {"$regex": query_lower, "$options": "i"}},
+                {"help_offered": {"$regex": query_lower, "$options": "i"}},
+                {"help_needed": {"$regex": query_lower, "$options": "i"}},
+                {"industry": {"$regex": query_lower, "$options": "i"}}
             ],
             "user_id": {"$ne": current_user.user_id}
         },
