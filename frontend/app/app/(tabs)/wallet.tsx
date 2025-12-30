@@ -37,8 +37,10 @@ interface WalletData {
   teacoins: number;
   is_seller: boolean;
   seller_status: string | null;
+  is_admin: boolean;
   pending_orders: number;
   active_orders: number;
+  pending_seller_requests: number;
 }
 
 interface Transaction {
