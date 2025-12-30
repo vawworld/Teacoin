@@ -226,7 +226,16 @@ export default function AdminDashboardScreen() {
         style={styles.headerGradient}
       >
         <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/app/(tabs)/wallet');
+              }
+            }}
+          >
             <Ionicons name="arrow-back" size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Admin Dashboard</Text>
