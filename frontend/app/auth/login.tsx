@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   iconContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   emoji: {
     fontSize: 80,
@@ -91,8 +91,26 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#A0522D',
-    marginBottom: 48,
+    marginBottom: 32,
     textAlign: 'center',
+  },
+  featuresContainer: {
+    width: '100%',
+    marginBottom: 32,
+  },
+  feature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 20,
+  },
+  featureIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  featureText: {
+    fontSize: 15,
+    color: '#8B4513',
   },
   button: {
     flexDirection: 'row',
@@ -106,6 +124,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    marginBottom: 16,
   },
   buttonIcon: {
     marginRight: 8,
@@ -116,9 +135,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footer: {
-    marginTop: 32,
     fontSize: 14,
     color: '#A0522D',
     textAlign: 'center',
+    marginBottom: 4,
+  },
+  note: {
+    fontSize: 12,
+    color: '#BC8F8F',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
