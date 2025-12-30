@@ -79,11 +79,92 @@ export default function SellerDashboardScreen() {
   const [newItemDesc, setNewItemDesc] = useState('');
   const [addingItem, setAddingItem] = useState(false);
 
+  // Notification state
+  const [newOrderCount, setNewOrderCount] = useState(0);
+  const [showNewOrderBanner, setShowNewOrderBanner] = useState(false);
+  const [lastOrderCount, setLastOrderCount] = useState(0);
+  const bannerAnim = useRef(new Animated.Value(-100)).current;
+  const pollingInterval = useRef<NodeJS.Timeout | null>(null);
+
   useFocusEffect(
     useCallback(() => {
       loadData();
+      // Start polling for new orders every 15 seconds
+      startPolling();
+      
+      return () => {
+        // Stop polling when screen loses focus
+        if (pollingInterval.current) {
+          clearInterval(pollingInterval.current);
+        }
+      };
     }, [])
   );
+
+  const startPolling = () => {
+    // Clear any existing interval
+    if (pollingInterval.current) {
+      clearInterval(pollingInterval.current);
+    }
+    
+    // Poll every 15 seconds
+    pollingInterval.current = setInterval(() => {
+      checkForNewOrders();
+    }, 15000);
+  };
+
+  const checkForNewOrders = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/orders/seller`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      if (response.ok) {
+        const newOrders: Order[] = await response.json();
+        const pendingOrders = newOrders.filter(o => o.status === 'pending');
+        
+        // Check if there are new pending orders since last check
+        if (pendingOrders.length > lastOrderCount && lastOrderCount > 0) {
+          const newCount = pendingOrders.length - lastOrderCount;
+          setNewOrderCount(newCount);
+          showNotificationBanner(newCount);
+          // Vibrate to alert the seller
+          Vibration.vibrate([0, 200, 100, 200]);
+        }
+        
+        setLastOrderCount(pendingOrders.length);
+        setOrders(newOrders);
+      }
+    } catch (error) {
+      console.error('Error polling for orders:', error);
+    }
+  };
+
+  const showNotificationBanner = (count: number) => {
+    setShowNewOrderBanner(true);
+    // Animate banner sliding in
+    Animated.spring(bannerAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 80,
+      friction: 10,
+    }).start();
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      hideNotificationBanner();
+    }, 5000);
+  };
+
+  const hideNotificationBanner = () => {
+    Animated.timing(bannerAnim, {
+      toValue: -100,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowNewOrderBanner(false);
+      setNewOrderCount(0);
+    });
+  };
 
   const loadData = async () => {
     try {
