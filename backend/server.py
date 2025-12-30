@@ -727,6 +727,9 @@ async def create_menu_item(
     if not user.get("is_seller") or user.get("seller_status") != "approved":
         raise HTTPException(status_code=403, detail="Only approved sellers can create menu items")
     
+    # Validate price (1-100 TeaCoins)
+    price = max(1, min(100, item.price))
+    
     item_id = f"item_{uuid.uuid4().hex[:12]}"
     menu_item = {
         "item_id": item_id,
@@ -735,7 +738,7 @@ async def create_menu_item(
         "name": item.name,
         "description": item.description,
         "image": item.image,
-        "price": TEA_ORDER_COST,
+        "price": price,
         "available": True,
         "created_at": datetime.now(timezone.utc)
     }
