@@ -384,8 +384,10 @@ async def create_conversation(
         "last_message": None
     }
     
-    await db.conversations.insert_one(conversation)
+    await db.conversations.insert_one(conversation.copy())
     
+    # Return without _id
+    conversation["created_at"] = conversation["created_at"].isoformat()
     return conversation
 
 @api_router.get("/conversations")
