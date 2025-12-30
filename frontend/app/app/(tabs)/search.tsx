@@ -109,7 +109,7 @@ export default function SearchScreen() {
 
       if (response.ok) {
         const conversation = await response.json();
-        router.push(`/chat/${conversation.conversation_id}`);
+        router.push(`/app/chat/${conversation.conversation_id}`);
       }
     } catch (error) {
       console.error('Error creating conversation:', error);
