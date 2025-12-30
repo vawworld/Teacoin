@@ -635,13 +635,18 @@ async def approve_seller(
     current_user: User = Depends(require_auth)
 ):
     """Approve or reject a seller request (admin only)"""
+    logging.info(f"Seller approval request: user_id={user_id}, approve={approve}, by={current_user.email}")
+    
     # Check if current user is admin
     admin_user = await db.users.find_one(
         {"user_id": current_user.user_id},
-        {"_id": 0, "is_admin": 1}
+        {"_id": 0, "is_admin": 1, "email": 1}
     )
     
+    logging.info(f"Admin check: user={admin_user}")
+    
     if not admin_user.get("is_admin"):
+        logging.warning(f"Non-admin user {current_user.email} tried to approve seller")
         raise HTTPException(status_code=403, detail="Only admins can approve sellers")
     
     user = await db.users.find_one(
@@ -652,11 +657,13 @@ async def approve_seller(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    logging.info(f"User to approve: {user.get('name')}, current_status={user.get('seller_status')}")
+    
     if user.get("seller_status") != "pending":
         raise HTTPException(status_code=400, detail="No pending seller request for this user")
     
     if approve:
-        await db.users.update_one(
+        result = await db.users.update_one(
             {"user_id": user_id},
             {
                 "$set": {
@@ -665,6 +672,7 @@ async def approve_seller(
                 }
             }
         )
+        logging.info(f"Approval result: matched={result.matched_count}, modified={result.modified_count}")
         return {"message": f"Seller request approved for {user['name']}"}
     else:
         await db.users.update_one(
