@@ -125,7 +125,14 @@ export default function AdminDashboardScreen() {
                 loadData();
               } else {
                 const error = await response.json();
-                Alert.alert('Error', error.detail || 'Failed to process request');
+                if (response.status === 403) {
+                  Alert.alert(
+                    'Access Denied', 
+                    'Only the admin user (Kummar Sambhav - 11.kumarsambhav@gmail.com) can approve or reject sellers. Please login with the admin account.'
+                  );
+                } else {
+                  Alert.alert('Error', error.detail || 'Failed to process request');
+                }
               }
             } catch (error) {
               Alert.alert('Error', 'Failed to process request');
