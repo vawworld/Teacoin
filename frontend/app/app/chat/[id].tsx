@@ -35,6 +35,11 @@ export default function ChatScreen() {
   const { user, sessionToken } = useAuth();
   const router = useRouter();
   
+  console.log('🔵 CHAT SCREEN LOADED');
+  console.log('🔵 Conversation ID:', conversationId);
+  console.log('🔵 User:', user?.name);
+  console.log('🔵 Session Token exists:', !!sessionToken);
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
