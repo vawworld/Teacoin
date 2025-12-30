@@ -1,30 +1,32 @@
 import { Audio } from 'expo-av';
 import { Platform } from 'react-native';
 
-// Sound URLs - using reliable free sounds
+// Sound URLs - using reliable sources
 const SOUND_URLS = {
-  // Order notification - bell/chime sound (shorter, more reliable)
-  orderNotification: 'https://cdn.pixabay.com/audio/2022/03/24/audio_d1718ab41b.mp3',
-  // Chat message sent - whoosh/send sound  
-  messageSent: 'https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3',
-  // Chat message received - pop/notification sound
-  messageReceived: 'https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3',
+  // Order notification - notification sound
+  orderNotification: 'https://www.soundjay.com/buttons/sounds/button-09a.mp3',
+  // Chat message sent
+  messageSent: 'https://www.soundjay.com/buttons/sounds/button-21.mp3',
+  // Chat message received
+  messageReceived: 'https://www.soundjay.com/buttons/sounds/button-16.mp3',
   // Success sound
-  success: 'https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b73c6.mp3',
+  success: 'https://www.soundjay.com/buttons/sounds/button-35.mp3',
 };
 
 class SoundManager {
   private isInitialized = false;
+  private soundCache: Audio.Sound | null = null;
 
   async initialize() {
     if (this.isInitialized) return;
     
     try {
-      // Configure audio mode
+      // Configure audio mode for mobile
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
         shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
       });
       this.isInitialized = true;
       console.log('🔊 Audio initialized successfully');
@@ -43,21 +45,31 @@ class SoundManager {
         return;
       }
 
-      console.log('🔊 Loading sound:', soundName);
+      console.log('🔊 Loading sound:', soundName, 'URL:', url);
+      
+      // Unload previous sound if exists
+      if (this.soundCache) {
+        try {
+          await this.soundCache.unloadAsync();
+        } catch (e) {
+          // Ignore unload errors
+        }
+        this.soundCache = null;
+      }
       
       // Create and play new sound
       const { sound } = await Audio.Sound.createAsync(
         { uri: url },
         { shouldPlay: true, volume: 1.0 }
       );
-
+      
+      this.soundCache = sound;
       console.log('🔊 Sound playing:', soundName);
 
       // Clean up after playing
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
-          console.log('🔊 Sound finished, unloading');
-          sound.unloadAsync();
+          console.log('🔊 Sound finished');
         }
       });
     } catch (error) {
