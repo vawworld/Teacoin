@@ -97,52 +97,49 @@ export default function AdminDashboardScreen() {
   };
 
   const handleApproval = async (userId: string, userName: string, approve: boolean) => {
-    const action = approve ? 'approve' : 'reject';
-    Alert.alert(
-      `${approve ? 'Approve' : 'Reject'} Seller`,
-      `Are you sure you want to ${action} ${userName} as a seller?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: approve ? 'Approve' : 'Reject',
-          style: approve ? 'default' : 'destructive',
-          onPress: async () => {
-            setActionLoading(userId);
-            try {
-              const response = await fetch(
-                `${BACKEND_URL}/api/admin/seller-approve/${userId}?approve=${approve}`,
-                {
-                  method: 'POST',
-                  headers: { Authorization: `Bearer ${sessionToken}` },
-                }
-              );
-
-              if (response.ok) {
-                Alert.alert(
-                  'Success',
-                  `${userName} has been ${approve ? 'approved' : 'rejected'} as a seller.`
-                );
-                loadData();
-              } else {
-                const error = await response.json();
-                if (response.status === 403) {
-                  Alert.alert(
-                    'Access Denied', 
-                    'Only the admin user (Kummar Sambhav - 11.kumarsambhav@gmail.com) can approve or reject sellers. Please login with the admin account.'
-                  );
-                } else {
-                  Alert.alert('Error', error.detail || 'Failed to process request');
-                }
-              }
-            } catch (error) {
-              Alert.alert('Error', 'Failed to process request');
-            } finally {
-              setActionLoading(null);
-            }
-          },
+    // Direct action without confirmation dialog for better mobile compatibility
+    setActionLoading(userId);
+    try {
+      console.log(`Attempting to ${approve ? 'approve' : 'reject'} seller: ${userId}`);
+      const url = `${BACKEND_URL}/api/admin/seller-approve/${userId}?approve=${approve}`;
+      console.log('API URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${sessionToken}`,
+          'Content-Type': 'application/json'
         },
-      ]
-    );
+      });
+
+      console.log('Response status:', response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Success:', result);
+        Alert.alert(
+          'Success! 🎉',
+          `${userName} has been ${approve ? 'approved as a seller' : 'rejected'}!`
+        );
+        loadData();
+      } else {
+        const error = await response.json();
+        console.log('Error response:', error);
+        if (response.status === 403) {
+          Alert.alert(
+            'Access Denied', 
+            'Only the admin user (Kummar Sambhav) can approve or reject sellers. Please login with the admin account.'
+          );
+        } else {
+          Alert.alert('Error', error.detail || 'Failed to process request');
+        }
+      }
+    } catch (error) {
+      console.error('Approval error:', error);
+      Alert.alert('Error', 'Failed to process request. Please try again.');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const renderRequest = ({ item }: { item: SellerRequest }) => (
