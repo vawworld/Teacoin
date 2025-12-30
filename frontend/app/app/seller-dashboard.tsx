@@ -218,8 +218,11 @@ export default function SellerDashboardScreen() {
         setOrders(ordersData);
         // Initialize order IDs for tracking (don't show notification on first load)
         lastOrderIdsRef.current = new Set(ordersData.map((o: Order) => o.order_id));
-        isFirstLoadRef.current = false;
-        console.log('📦 Initial orders loaded:', ordersData.length, 'Order IDs:', [...lastOrderIdsRef.current]);
+        console.log('📦 Initial orders loaded:', ordersData.length, 'IDs tracked:', lastOrderIdsRef.current.size);
+        
+        // Mark as initialized and start polling NOW
+        isInitializedRef.current = true;
+        startPolling();
       }
       if (menuRes.ok) setMenuItems(await menuRes.json());
     } catch (error) {
