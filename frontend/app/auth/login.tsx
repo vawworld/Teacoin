@@ -22,7 +22,7 @@ export default function LoginScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0084ff" />
+        <ActivityIndicator size="large" color="#8B4513" />
       </View>
     );
   }
@@ -31,18 +31,18 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Ionicons name="chatbubbles" size={80} color="#0084ff" />
+          <Text style={styles.emoji}>☕</Text>
         </View>
         
-        <Text style={styles.title}>ProLink Messenger</Text>
-        <Text style={styles.subtitle}>Connect with professionals worldwide</Text>
+        <Text style={styles.title}>TEAFRIENDS</Text>
+        <Text style={styles.subtitle}>Connect with tea lovers worldwide</Text>
         
         <TouchableOpacity style={styles.button} onPress={login}>
           <Ionicons name="logo-google" size={20} color="white" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>Continue with Google</Text>
         </TouchableOpacity>
         
-        <Text style={styles.footer}>Search by profession, start chatting instantly</Text>
+        <Text style={styles.footer}>Find tea enthusiasts and start chatting</Text>
       </View>
     </View>
   );
@@ -51,7 +51,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF8DC',
   },
   content: {
     flex: 1,
@@ -62,21 +62,25 @@ const styles = StyleSheet.create({
   iconContainer: {
     marginBottom: 32,
   },
+  emoji: {
+    fontSize: 80,
+  },
   title: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#8B4513',
     marginBottom: 8,
+    letterSpacing: 2,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#A0522D',
     marginBottom: 48,
     textAlign: 'center',
   },
   button: {
     flexDirection: 'row',
-    backgroundColor: '#0084ff',
+    backgroundColor: '#8B4513',
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 12,
@@ -98,7 +102,7 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 32,
     fontSize: 14,
-    color: '#999',
+    color: '#A0522D',
     textAlign: 'center',
   },
 });
