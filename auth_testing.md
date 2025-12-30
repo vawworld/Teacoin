@@ -27,11 +27,11 @@ print('User ID: ' + visitorId);
 ## Step 2: Test Backend API
 ```bash
 # Test auth endpoint
-curl -X GET "https://prolink-messenger.preview.emergentagent.com/api/auth/me" \
+curl -X GET "https://professio.preview.emergentagent.com/api/auth/me" \
   -H "Authorization: Bearer YOUR_SESSION_TOKEN"
 
 # Test protected endpoints
-curl -X GET "https://prolink-messenger.preview.emergentagent.com/api/users" \
+curl -X GET "https://professio.preview.emergentagent.com/api/users" \
   -H "Authorization: Bearer YOUR_SESSION_TOKEN"
 ```
 
@@ -47,7 +47,7 @@ await page.context.add_cookies([{
     "secure": true,
     "sameSite": "None"
 }]);
-await page.goto("https://prolink-messenger.preview.emergentagent.com");
+await page.goto("https://professio.preview.emergentagent.com");
 ```
 
 ## MongoDB ID Handling

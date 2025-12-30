@@ -12,7 +12,7 @@ from datetime import datetime
 import uuid
 
 # Configuration
-BASE_URL = "https://prolink-messenger.preview.emergentagent.com"
+BASE_URL = "https://professio.preview.emergentagent.com"
 API_URL = f"{BASE_URL}/api"
 
 class ProLinkTester:
