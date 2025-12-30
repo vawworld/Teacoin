@@ -22,7 +22,6 @@ class ProLinkTester:
         self.user_id = None
         self.test_users = []
         self.test_conversations = []
-        self.socket_client = None
         
     async def setup(self):
         """Setup test session"""
@@ -31,8 +30,6 @@ class ProLinkTester:
         
     async def cleanup(self):
         """Cleanup test session"""
-        if self.socket_client:
-            await self.socket_client.disconnect()
         if self.session:
             await self.session.close()
         print("🧹 Test session cleaned up")
@@ -82,9 +79,9 @@ class ProLinkTester:
         
         # Test profile update
         profile_data = {
-            "profession": "software engineer",
-            "bio": "Full-stack developer with 5 years experience",
-            "skills": ["python", "javascript", "react", "fastapi"],
+            "profession": "cg artist",
+            "bio": "3D artist specializing in character modeling and animation",
+            "skills": ["3d modeling", "animation", "texturing", "cg"],
             "picture": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/8A"
         }
         
@@ -111,14 +108,21 @@ class ProLinkTester:
             return False
     
     async def test_user_search(self):
-        """Test user search functionality"""
-        print("\n🔍 Testing User Search...")
+        """Test user search functionality including name matching"""
+        print("\n🔍 Testing User Search & Discovery...")
         
         try:
-            # Test search by profession
-            search_queries = ["engineer", "#developer", "python"]
+            # Test search by profession and name as mentioned in review request
+            search_queries = [
+                ("cg", "Should find CG artists"),
+                ("film", "Should find filmmakers"), 
+                ("singer", "Should find singers"),
+                ("photographer", "Should find photographers"),
+                ("alex", "Should find users by name"),
+                ("#cg", "Should handle hashtag search")
+            ]
             
-            for query in search_queries:
+            for query, description in search_queries:
                 async with self.session.get(
                     f"{API_URL}/users/search",
                     headers=self.headers,
@@ -129,7 +133,7 @@ class ProLinkTester:
                         return "auth_required"
                     elif resp.status == 200:
                         users = await resp.json()
-                        print(f"✅ Search for '{query}' returned {len(users)} users")
+                        print(f"✅ Search for '{query}' returned {len(users)} users - {description}")
                     else:
                         print(f"❌ Search failed for '{query}': {resp.status}")
                         return False
@@ -140,9 +144,36 @@ class ProLinkTester:
             print(f"❌ User search test failed: {e}")
             return False
     
+    async def test_get_all_users(self):
+        """Test GET /api/users/all endpoint (new endpoint mentioned in review)"""
+        print("\n👥 Testing GET /api/users/all endpoint...")
+        
+        try:
+            async with self.session.get(
+                f"{API_URL}/users/all",
+                headers=self.headers
+            ) as resp:
+                if resp.status == 401:
+                    print("⚠️  Get all users requires valid authentication")
+                    return "auth_required"
+                elif resp.status == 200:
+                    users = await resp.json()
+                    print(f"✅ Get all users successful - Found {len(users)} users")
+                    print("   Should return all users except current user")
+                    return True
+                else:
+                    print(f"❌ Get all users failed: {resp.status}")
+                    text = await resp.text()
+                    print(f"   Response: {text}")
+                    return False
+                    
+        except Exception as e:
+            print(f"❌ Get all users test failed: {e}")
+            return False
+    
     async def test_user_by_id(self):
         """Test get user by ID"""
-        print("\n👥 Testing Get User by ID...")
+        print("\n👤 Testing Get User by ID...")
         
         try:
             # Test with a mock user ID
@@ -201,11 +232,11 @@ class ProLinkTester:
                     print(f"   Response: {text}")
                     return False
             
-            # Test create group conversation
+            # Test create group conversation (3+ users as mentioned in review)
             group_data = {
                 "type": "group",
-                "participant_ids": ["user_test456", "user_test789"],
-                "name": "Test Group Chat"
+                "participant_ids": ["user_test456", "user_test789", "user_test101"],
+                "name": "Creative Professionals Group"
             }
             
             async with self.session.post(
@@ -215,7 +246,7 @@ class ProLinkTester:
             ) as resp:
                 if resp.status == 200:
                     conversation = await resp.json()
-                    print("✅ Create group conversation endpoint working")
+                    print("✅ Create group conversation endpoint working (3+ users)")
                     conv_id = conversation.get("conversation_id")
                     if conv_id:
                         self.test_conversations.append(conv_id)
@@ -231,30 +262,190 @@ class ProLinkTester:
                 if resp.status == 200:
                     conversations = await resp.json()
                     print(f"✅ Get conversations endpoint working - Found {len(conversations)} conversations")
+                    
+                    # Check conversation structure
+                    for conv in conversations:
+                        if 'last_message' in conv:
+                            print("✅ Conversations include last_message field")
+                        if 'participants' in conv:
+                            print("✅ Conversations include participants field")
                 else:
                     print(f"❌ Get conversations failed: {resp.status}")
                     return False
-            
-            # Test get messages for conversation
-            if self.test_conversations:
-                conv_id = self.test_conversations[0]
-                async with self.session.get(
-                    f"{API_URL}/conversations/{conv_id}/messages",
-                    headers=self.headers
-                ) as resp:
-                    if resp.status == 200:
-                        messages = await resp.json()
-                        print(f"✅ Get messages endpoint working - Found {len(messages)} messages")
-                    elif resp.status == 404:
-                        print("✅ Get messages endpoint working (conversation not found as expected)")
-                    else:
-                        print(f"❌ Get messages failed: {resp.status}")
-                        return False
             
             return True
             
         except Exception as e:
             print(f"❌ Conversation management test failed: {e}")
+            return False
+    
+    async def test_http_messaging(self):
+        """Test HTTP-based messaging (polling alternative to Socket.io)"""
+        print("\n📨 Testing HTTP Messaging (Polling)...")
+        
+        try:
+            # Create a test conversation first
+            conv_data = {
+                "type": "direct",
+                "participant_ids": ["user_test_messaging"]
+            }
+            
+            conv_id = None
+            async with self.session.post(
+                f"{API_URL}/conversations",
+                headers=self.headers,
+                json=conv_data
+            ) as resp:
+                if resp.status == 200:
+                    conversation = await resp.json()
+                    conv_id = conversation.get("conversation_id")
+                    print(f"✅ Test conversation created: {conv_id}")
+                elif resp.status == 401:
+                    print("⚠️  HTTP messaging requires valid authentication")
+                    return "auth_required"
+                else:
+                    print(f"❌ Failed to create test conversation: {resp.status}")
+                    return False
+            
+            if not conv_id:
+                print("❌ No conversation ID available for messaging test")
+                return False
+            
+            # Test sending text message via HTTP POST /api/messages
+            text_message = {
+                "conversation_id": conv_id,
+                "content": "Hello! This is a test message via HTTP polling."
+            }
+            
+            async with self.session.post(
+                f"{API_URL}/messages",
+                headers=self.headers,
+                json=text_message
+            ) as resp:
+                if resp.status == 200:
+                    message = await resp.json()
+                    print("✅ Text message sent successfully via HTTP")
+                    print(f"   Message ID: {message.get('message_id')}")
+                    
+                    # Verify message structure
+                    required_fields = ['message_id', 'conversation_id', 'sender_id', 'sender_name', 'timestamp']
+                    missing_fields = [field for field in required_fields if field not in message]
+                    if missing_fields:
+                        print(f"❌ Message missing fields: {missing_fields}")
+                        return False
+                    else:
+                        print("✅ Message has all required fields")
+                        
+                elif resp.status == 401:
+                    print("⚠️  Send message requires valid authentication")
+                    return "auth_required"
+                else:
+                    print(f"❌ Send text message failed: {resp.status}")
+                    text = await resp.text()
+                    print(f"   Response: {text}")
+                    return False
+            
+            # Test sending image message (base64) via HTTP
+            image_message = {
+                "conversation_id": conv_id,
+                "content": "Sharing an image!",
+                "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+            }
+            
+            async with self.session.post(
+                f"{API_URL}/messages",
+                headers=self.headers,
+                json=image_message
+            ) as resp:
+                if resp.status == 200:
+                    message = await resp.json()
+                    print("✅ Image message sent successfully via HTTP")
+                    print(f"   Message ID: {message.get('message_id')}")
+                    
+                    # Verify image field is present
+                    if 'image' in message:
+                        print("✅ Image message contains image field")
+                    else:
+                        print("❌ Image message missing image field")
+                        return False
+                        
+                else:
+                    print(f"❌ Send image message failed: {resp.status}")
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ HTTP messaging test failed: {e}")
+            return False
+    
+    async def test_message_retrieval(self):
+        """Test message retrieval via GET /api/conversations/{id}/messages"""
+        print("\n📥 Testing Message Retrieval...")
+        
+        try:
+            # Use existing test conversation or create one
+            conv_id = None
+            if self.test_conversations:
+                conv_id = self.test_conversations[0]
+            else:
+                # Create a test conversation
+                conv_data = {
+                    "type": "direct",
+                    "participant_ids": ["user_test_retrieval"]
+                }
+                
+                async with self.session.post(
+                    f"{API_URL}/conversations",
+                    headers=self.headers,
+                    json=conv_data
+                ) as resp:
+                    if resp.status == 200:
+                        conversation = await resp.json()
+                        conv_id = conversation.get("conversation_id")
+                    elif resp.status == 401:
+                        print("⚠️  Message retrieval requires valid authentication")
+                        return "auth_required"
+            
+            if not conv_id:
+                print("❌ No conversation available for message retrieval test")
+                return False
+            
+            # Test GET /api/conversations/{id}/messages
+            async with self.session.get(
+                f"{API_URL}/conversations/{conv_id}/messages",
+                headers=self.headers
+            ) as resp:
+                if resp.status == 200:
+                    messages = await resp.json()
+                    print(f"✅ Message retrieval successful - Found {len(messages)} messages")
+                    
+                    # Verify message structure if messages exist
+                    for msg in messages:
+                        required_fields = ['message_id', 'sender_id', 'sender_name', 'timestamp']
+                        missing_fields = [field for field in required_fields if field not in msg]
+                        if missing_fields:
+                            print(f"❌ Message missing fields: {missing_fields}")
+                            return False
+                    
+                    if messages:
+                        print("✅ All messages have required fields")
+                    else:
+                        print("✅ Message retrieval working (no messages in conversation)")
+                    
+                    return True
+                elif resp.status == 404:
+                    print("✅ Message retrieval endpoint working (conversation not found as expected)")
+                    return True
+                elif resp.status == 401:
+                    print("⚠️  Message retrieval requires valid authentication")
+                    return "auth_required"
+                else:
+                    print(f"❌ Message retrieval failed: {resp.status}")
+                    return False
+                    
+        except Exception as e:
+            print(f"❌ Message retrieval test failed: {e}")
             return False
     
     async def test_socket_connection(self):
