@@ -452,6 +452,11 @@ async def get_messages(
         {"_id": 0}
     ).sort("timestamp", -1).limit(limit).to_list(limit)
     
+    # Convert timestamps to ISO strings
+    for msg in messages:
+        if "timestamp" in msg and msg["timestamp"]:
+            msg["timestamp"] = msg["timestamp"].isoformat()
+    
     return list(reversed(messages))
 
 # ==================== SOCKET.IO EVENTS ====================
