@@ -492,13 +492,17 @@ class TeaCoinsFlowTester:
                 params=step_info.get("params")
             )
             
-            if response and response.status_code == 401:
+            if response is None:
+                self.log_test(step_info["step"], False, 
+                             f"Request failed: {step_info['description']}")
+                all_endpoints_accessible = False
+            elif response.status_code == 401:
                 # 401 is expected with mock tokens - this means endpoint is accessible
                 self.log_test(step_info["step"], True, 
                              f"Endpoint accessible: {step_info['description']}")
             else:
                 self.log_test(step_info["step"], False, 
-                             f"Endpoint issue: Expected 401 with mock auth, got {response.status_code if response else 'No response'}")
+                             f"Unexpected response: Expected 401 with mock auth, got {response.status_code}")
                 all_endpoints_accessible = False
         
         return all_endpoints_accessible
