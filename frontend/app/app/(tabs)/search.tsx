@@ -119,7 +119,7 @@ export default function SearchScreen() {
   const renderUser = ({ item }: { item: User }) => (
     <TouchableOpacity
       style={styles.userItem}
-      onPress={() => router.push(`/user/${item.user_id}`)}
+      onPress={() => router.push(`/app/user/${item.user_id}`)}
     >
       <View style={styles.userInfo}>
         {item.picture ? (
