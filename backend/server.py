@@ -28,7 +28,8 @@ sio = socketio.AsyncServer(
     logger=True,
     engineio_logger=True,
     ping_timeout=60,
-    ping_interval=25
+    ping_interval=25,
+    path='/api/socket.io/'
 )
 
 # Create the main app
