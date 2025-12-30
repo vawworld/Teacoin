@@ -2,8 +2,10 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const SESSION_TOKEN_KEY = 'teafriends_session_token';
 
 interface User {
   user_id: string;
