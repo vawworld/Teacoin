@@ -136,7 +136,8 @@ export default function OrderTeaScreen() {
           </LinearGradient>
         )}
         <View style={styles.priceTag}>
-          <Text style={styles.priceText}>1 \ud83c\udf75</Text>
+          <Ionicons name="logo-bitcoin" size={14} color={COLORS.primary} />
+          <Text style={styles.priceText}>{item.price || 1}</Text>
         </View>
       </View>
       <View style={styles.menuInfo}>
