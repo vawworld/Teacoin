@@ -64,6 +64,12 @@ class User(BaseModel):
     online: bool = False
     last_seen: Optional[datetime] = None
     created_at: datetime
+    # TeaCoins Wallet
+    teacoins: int = DEFAULT_TEACOINS
+    # Seller fields
+    is_seller: bool = False
+    seller_status: Optional[str] = None  # "pending", "approved", "rejected"
+    seller_requested_at: Optional[datetime] = None
 
 class UserProfile(BaseModel):
     profession: Optional[str] = None
