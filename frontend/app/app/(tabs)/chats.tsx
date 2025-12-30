@@ -14,9 +14,21 @@ import { useSocket } from '../../../contexts/SocketContext';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
-import CustomTabBar from '../../../components/CustomTabBar';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+// TEAFRIENDS Brand Colors
+const COLORS = {
+  primary: '#8B4513',
+  secondary: '#D2691E',
+  accent: '#F4A460',
+  background: '#FFF8DC',
+  cardBg: '#FFFAF0',
+  white: '#FFFFFF',
+  text: '#3E2723',
+  textLight: '#8D6E63',
+  success: '#4CAF50',
+};
 
 interface Conversation {
   conversation_id: string;
@@ -45,7 +57,6 @@ export default function ChatsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    // Connect socket when user is authenticated
     if (sessionToken) {
       connectSocket(sessionToken);
     }
@@ -53,32 +64,21 @@ export default function ChatsScreen() {
 
   useEffect(() => {
     loadConversations();
-
-    // Listen for new messages
     if (socket) {
-      socket.on('new_message', () => {
-        loadConversations();
-      });
+      socket.on('new_message', () => loadConversations());
     }
-
     return () => {
-      if (socket) {
-        socket.off('new_message');
-      }
+      if (socket) socket.off('new_message');
     };
   }, [socket]);
 
   const loadConversations = async () => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/conversations`, {
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-        },
+        headers: { Authorization: `Bearer ${sessionToken}` },
       });
-
       if (response.ok) {
-        const data = await response.json();
-        setConversations(data);
+        setConversations(await response.json());
       }
     } catch (error) {
       console.error('Error loading conversations:', error);
@@ -103,6 +103,7 @@ export default function ChatsScreen() {
       <TouchableOpacity
         style={styles.conversationItem}
         onPress={() => router.push(`/app/chat/${item.conversation_id}`)}
+        activeOpacity={0.7}
       >
         <View style={styles.avatarContainer}>
           {displayPicture ? (
@@ -112,7 +113,7 @@ export default function ChatsScreen() {
               <Ionicons
                 name={isGroup ? 'people' : 'person'}
                 size={24}
-                color="#999"
+                color={COLORS.textLight}
               />
             </View>
           )}
@@ -146,7 +147,7 @@ export default function ChatsScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0084ff" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -154,30 +155,48 @@ export default function ChatsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Chats</Text>
-        <TouchableOpacity onPress={() => router.push('/create-group')}>
-          <Ionicons name="create-outline" size={24} color="#0084ff" />
+        <View>
+          <Text style={styles.headerSubtitle}>Welcome back</Text>
+          <Text style={styles.headerTitle}>Messages</Text>
+        </View>
+        <TouchableOpacity 
+          style={styles.createButton}
+          onPress={() => router.push('/app/create-group')}
+        >
+          <Ionicons name="create-outline" size={22} color={COLORS.white} />
         </TouchableOpacity>
       </View>
 
       {conversations.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
+          <View style={styles.emptyIconBg}>
+            <Ionicons name="chatbubbles-outline" size={48} color={COLORS.textLight} />
+          </View>
           <Text style={styles.emptyText}>No conversations yet</Text>
-          <Text style={styles.emptySubtext}>Search for users to start chatting</Text>
+          <Text style={styles.emptySubtext}>Search for tea friends to start chatting</Text>
+          <TouchableOpacity 
+            style={styles.startButton}
+            onPress={() => router.push('/app/(tabs)/search')}
+          >
+            <Text style={styles.startButtonText}>Find Friends</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={conversations}
           renderItem={renderConversation}
           keyExtractor={(item) => item.conversation_id}
+          contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={COLORS.primary}
+            />
           }
+          showsVerticalScrollIndicator={false}
         />
       )}
-      
-      <CustomTabBar />
     </View>
   );
 }
@@ -185,26 +204,51 @@ export default function ChatsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: COLORS.white,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: COLORS.textLight,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
-    color: '#000',
+    color: COLORS.text,
+    marginTop: 2,
+  },
+  createButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: COLORS.background,
   },
   emptyState: {
     flex: 1,
@@ -212,33 +256,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
+  emptyIconBg: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#666',
-    marginTop: 16,
+    color: COLORS.text,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: COLORS.textLight,
     marginTop: 8,
+    textAlign: 'center',
+  },
+  startButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 25,
+    marginTop: 24,
+  },
+  startButtonText: {
+    color: COLORS.white,
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  listContent: {
+    padding: 16,
   },
   conversationItem: {
     flexDirection: 'row',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   avatarContainer: {
-    marginRight: 12,
+    marginRight: 14,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 54,
+    height: 54,
+    borderRadius: 18,
   },
   avatarPlaceholder: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -249,9 +323,9 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#4caf50',
+    backgroundColor: COLORS.success,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: COLORS.white,
   },
   conversationInfo: {
     flex: 1,
@@ -266,14 +340,14 @@ const styles = StyleSheet.create({
   conversationName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: COLORS.text,
   },
   timestamp: {
     fontSize: 12,
-    color: '#999',
+    color: COLORS.textLight,
   },
   lastMessage: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textLight,
   },
 });

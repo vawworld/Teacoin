@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,31 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  FlatList,
-  Image,
-  Alert,
+  Dimensions,
 } from 'react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const { width } = Dimensions.get('window');
+
+// TEAFRIENDS Brand Colors
+const COLORS = {
+  primary: '#8B4513',
+  secondary: '#D2691E',
+  accent: '#F4A460',
+  background: '#FFF8DC',
+  cardBg: '#FFFAF0',
+  white: '#FFFFFF',
+  text: '#3E2723',
+  textLight: '#8D6E63',
+  success: '#4CAF50',
+  warning: '#FF9800',
+  error: '#f44336',
+};
 
 interface WalletData {
   teacoins: number;
@@ -63,13 +78,10 @@ export default function WalletScreen() {
       ]);
 
       if (walletRes.ok) {
-        const walletData = await walletRes.json();
-        setWallet(walletData);
+        setWallet(await walletRes.json());
       }
-
       if (transactionsRes.ok) {
-        const txnData = await transactionsRes.json();
-        setTransactions(txnData);
+        setTransactions(await transactionsRes.json());
       }
     } catch (error) {
       console.error('Error loading wallet data:', error);
@@ -87,49 +99,22 @@ export default function WalletScreen() {
   const getTransactionIcon = (type: string, isIncoming: boolean) => {
     switch (type) {
       case 'signup_bonus':
-        return { name: 'gift', color: '#4CAF50' };
+        return { name: 'gift', color: COLORS.success, bg: '#E8F5E9' };
       case 'order_payment':
         return isIncoming
-          ? { name: 'arrow-down', color: '#4CAF50' }
-          : { name: 'arrow-up', color: '#f44336' };
+          ? { name: 'arrow-down-circle', color: COLORS.success, bg: '#E8F5E9' }
+          : { name: 'arrow-up-circle', color: COLORS.error, bg: '#FFEBEE' };
       case 'refund':
-        return { name: 'refresh', color: '#FF9800' };
+        return { name: 'refresh-circle', color: COLORS.warning, bg: '#FFF3E0' };
       default:
-        return { name: 'swap-horizontal', color: '#2196F3' };
+        return { name: 'swap-horizontal', color: COLORS.primary, bg: COLORS.background };
     }
-  };
-
-  const renderTransaction = ({ item }: { item: Transaction }) => {
-    const isIncoming = item.to_user_id === user?.user_id;
-    const icon = getTransactionIcon(item.transaction_type, isIncoming);
-
-    return (
-      <View style={styles.transactionItem}>
-        <View style={[styles.transactionIcon, { backgroundColor: icon.color + '20' }]}>
-          <Ionicons name={icon.name as any} size={20} color={icon.color} />
-        </View>
-        <View style={styles.transactionInfo}>
-          <Text style={styles.transactionDesc}>{item.description}</Text>
-          <Text style={styles.transactionTime}>
-            {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
-          </Text>
-        </View>
-        <Text
-          style={[
-            styles.transactionAmount,
-            { color: isIncoming ? '#4CAF50' : '#f44336' },
-          ]}
-        >
-          {isIncoming ? '+' : '-'}{item.amount} 🍵
-        </Text>
-      </View>
-    );
   };
 
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0084ff" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -137,97 +122,182 @@ export default function WalletScreen() {
   return (
     <ScrollView
       style={styles.container}
+      showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh}
+          tintColor={COLORS.primary}
+        />
       }
     >
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>TeaCoins Wallet</Text>
+        <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0]} 👋</Text>
+        <Text style={styles.headerTitle}>Your Wallet</Text>
       </View>
 
       {/* Balance Card */}
-      <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Your Balance</Text>
-        <View style={styles.balanceRow}>
-          <Text style={styles.balanceAmount}>{wallet?.teacoins || 0}</Text>
-          <Text style={styles.teaEmoji}>🍵</Text>
-        </View>
-        <Text style={styles.balanceSubtext}>TeaCoins</Text>
+      <View style={styles.balanceCardWrapper}>
+        <LinearGradient
+          colors={['#8B4513', '#A0522D', '#CD853F']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.balanceCard}
+        >
+          <View style={styles.balanceHeader}>
+            <Text style={styles.balanceLabel}>Available Balance</Text>
+            <View style={styles.teaIconBg}>
+              <Text style={styles.teaIcon}>🍵</Text>
+            </View>
+          </View>
+          
+          <View style={styles.balanceRow}>
+            <Text style={styles.balanceAmount}>{wallet?.teacoins || 0}</Text>
+            <Text style={styles.balanceCurrency}>TeaCoins</Text>
+          </View>
+
+          <View style={styles.cardFooter}>
+            <View style={styles.cardPattern}>
+              {[...Array(5)].map((_, i) => (
+                <View key={i} style={[styles.patternCircle, { opacity: 0.1 - i * 0.02 }]} />
+              ))}
+            </View>
+            {wallet?.is_seller && wallet?.seller_status === 'approved' && (
+              <View style={styles.sellerBadgeCard}>
+                <Ionicons name="checkmark-circle" size={14} color="#FFD700" />
+                <Text style={styles.sellerBadgeCardText}>Verified Seller</Text>
+              </View>
+            )}
+          </View>
+        </LinearGradient>
       </View>
 
       {/* Quick Actions */}
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => router.push('/app/order-tea')}
-        >
-          <View style={[styles.actionIcon, { backgroundColor: '#E8F5E9' }]}>
-            <Ionicons name="cafe" size={24} color="#4CAF50" />
-          </View>
-          <Text style={styles.actionText}>Order Tea</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => router.push('/app/my-orders')}
-        >
-          <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-            <Ionicons name="receipt" size={24} color="#2196F3" />
-          </View>
-          <Text style={styles.actionText}>My Orders</Text>
-          {wallet?.active_orders ? (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{wallet.active_orders}</Text>
-            </View>
-          ) : null}
-        </TouchableOpacity>
-
-        {wallet?.is_seller && wallet?.seller_status === 'approved' ? (
+      <View style={styles.actionsSection}>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.actionsGrid}>
           <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/app/seller-dashboard')}
+            style={styles.actionCard}
+            onPress={() => router.push('/app/order-tea')}
+            activeOpacity={0.7}
           >
-            <View style={[styles.actionIcon, { backgroundColor: '#FFF3E0' }]}>
-              <Ionicons name="storefront" size={24} color="#FF9800" />
+            <View style={[styles.actionIconBg, { backgroundColor: '#E8F5E9' }]}>
+              <Ionicons name="cafe" size={28} color={COLORS.success} />
             </View>
-            <Text style={styles.actionText}>Seller</Text>
-            {wallet?.pending_orders ? (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{wallet.pending_orders}</Text>
+            <Text style={styles.actionTitle}>Order Tea</Text>
+            <Text style={styles.actionSubtitle}>Browse menu</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => router.push('/app/my-orders')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconBg, { backgroundColor: '#E3F2FD' }]}>
+              <Ionicons name="receipt" size={28} color="#2196F3" />
+              {wallet?.active_orders ? (
+                <View style={styles.actionBadge}>
+                  <Text style={styles.actionBadgeText}>{wallet.active_orders}</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={styles.actionTitle}>My Orders</Text>
+            <Text style={styles.actionSubtitle}>Track status</Text>
+          </TouchableOpacity>
+
+          {wallet?.is_seller && wallet?.seller_status === 'approved' ? (
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => router.push('/app/seller-dashboard')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionIconBg, { backgroundColor: '#FFF3E0' }]}>
+                <Ionicons name="storefront" size={28} color={COLORS.warning} />
+                {wallet?.pending_orders ? (
+                  <View style={styles.actionBadge}>
+                    <Text style={styles.actionBadgeText}>{wallet.pending_orders}</Text>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/app/become-seller')}
-          >
-            <View style={[styles.actionIcon, { backgroundColor: '#F3E5F5' }]}>
-              <Ionicons name="add-circle" size={24} color="#9C27B0" />
-            </View>
-            <Text style={styles.actionText}>
-              {wallet?.seller_status === 'pending' ? 'Pending' : 'Become Seller'}
-            </Text>
-          </TouchableOpacity>
-        )}
+              <Text style={styles.actionTitle}>Seller Hub</Text>
+              <Text style={styles.actionSubtitle}>Manage shop</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => router.push('/app/become-seller')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionIconBg, { backgroundColor: '#F3E5F5' }]}>
+                <Ionicons name="add-circle" size={28} color="#9C27B0" />
+              </View>
+              <Text style={styles.actionTitle}>
+                {wallet?.seller_status === 'pending' ? 'Pending' : 'Sell Tea'}
+              </Text>
+              <Text style={styles.actionSubtitle}>
+                {wallet?.seller_status === 'pending' ? 'Under review' : 'Start earning'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Transaction History */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Transaction History</Text>
+      <View style={styles.transactionsSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          {transactions.length > 0 && (
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         {transactions.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="receipt-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>No transactions yet</Text>
+            <View style={styles.emptyIconBg}>
+              <Ionicons name="wallet-outline" size={40} color={COLORS.textLight} />
+            </View>
+            <Text style={styles.emptyTitle}>No transactions yet</Text>
+            <Text style={styles.emptySubtitle}>Your activity will appear here</Text>
           </View>
         ) : (
-          transactions.map((txn) => (
-            <View key={txn.transaction_id}>
-              {renderTransaction({ item: txn })}
-            </View>
-          ))
+          <View style={styles.transactionsList}>
+            {transactions.slice(0, 5).map((txn) => {
+              const isIncoming = txn.to_user_id === user?.user_id;
+              const icon = getTransactionIcon(txn.transaction_type, isIncoming);
+              
+              return (
+                <View key={txn.transaction_id} style={styles.transactionItem}>
+                  <View style={[styles.transactionIcon, { backgroundColor: icon.bg }]}>
+                    <Ionicons name={icon.name as any} size={22} color={icon.color} />
+                  </View>
+                  <View style={styles.transactionInfo}>
+                    <Text style={styles.transactionDesc} numberOfLines={1}>
+                      {txn.description}
+                    </Text>
+                    <Text style={styles.transactionTime}>
+                      {formatDistanceToNow(new Date(txn.timestamp), { addSuffix: true })}
+                    </Text>
+                  </View>
+                  <View style={styles.transactionAmountContainer}>
+                    <Text style={[
+                      styles.transactionAmount,
+                      { color: isIncoming ? COLORS.success : COLORS.error }
+                    ]}>
+                      {isIncoming ? '+' : '-'}{txn.amount}
+                    </Text>
+                    <Text style={styles.transactionCoin}>🍵</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         )}
       </View>
+
+      <View style={styles.bottomPadding} />
     </ScrollView>
   );
 }
@@ -235,88 +305,148 @@ export default function WalletScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: COLORS.background,
   },
   header: {
-    padding: 16,
+    paddingHorizontal: 20,
     paddingTop: 60,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    paddingBottom: 10,
+  },
+  greeting: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    marginBottom: 4,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#000',
+    color: COLORS.text,
+  },
+  balanceCardWrapper: {
+    paddingHorizontal: 20,
+    marginTop: 16,
   },
   balanceCard: {
-    backgroundColor: '#4CAF50',
-    margin: 16,
+    borderRadius: 24,
     padding: 24,
-    borderRadius: 16,
+    minHeight: 180,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  balanceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
   },
   balanceLabel: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
-    marginBottom: 8,
+    fontWeight: '500',
+  },
+  teaIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  teaIcon: {
+    fontSize: 24,
   },
   balanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    marginTop: 16,
   },
   balanceAmount: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.white,
+    letterSpacing: 1,
   },
-  teaEmoji: {
-    fontSize: 40,
-  },
-  balanceSubtext: {
+  balanceCurrency: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
+    color: 'rgba(255,255,255,0.8)',
     marginTop: 4,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  actionButton: {
-    alignItems: 'center',
-    position: 'relative',
-  },
-  actionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  actionText: {
-    fontSize: 12,
-    color: '#666',
     fontWeight: '500',
   },
-  badge: {
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: 'auto',
+  },
+  cardPattern: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  patternCircle: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.white,
+  },
+  sellerBadgeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+  },
+  sellerBadgeCardText: {
+    fontSize: 12,
+    color: COLORS.white,
+    fontWeight: '600',
+  },
+  actionsSection: {
+    paddingHorizontal: 20,
+    marginTop: 28,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 16,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  actionCard: {
+    width: (width - 56) / 3,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  actionIconBg: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  actionBadge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: '#f44336',
+    backgroundColor: COLORS.error,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -324,35 +454,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 6,
   },
-  badgeText: {
-    color: '#fff',
-    fontSize: 12,
+  actionBadgeText: {
+    color: COLORS.white,
+    fontSize: 11,
     fontWeight: 'bold',
   },
-  section: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
+  actionTitle: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#000',
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  actionSubtitle: {
+    fontSize: 11,
+    color: COLORS.textLight,
+    marginTop: 2,
+  },
+  transactionsSection: {
+    paddingHorizontal: 20,
+    marginTop: 28,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  transactionsList: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   transactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    padding: 12,
+    borderRadius: 12,
   },
   transactionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -362,25 +514,52 @@ const styles = StyleSheet.create({
   },
   transactionDesc: {
     fontSize: 14,
-    color: '#333',
+    color: COLORS.text,
     fontWeight: '500',
   },
   transactionTime: {
     fontSize: 12,
-    color: '#999',
+    color: COLORS.textLight,
     marginTop: 2,
+  },
+  transactionAmountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   transactionAmount: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  transactionCoin: {
+    fontSize: 14,
   },
   emptyState: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 40,
     alignItems: 'center',
-    padding: 32,
   },
-  emptyText: {
+  emptyIconBg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  emptySubtitle: {
     fontSize: 14,
-    color: '#999',
-    marginTop: 8,
+    color: COLORS.textLight,
+    marginTop: 4,
+  },
+  bottomPadding: {
+    height: 100,
   },
 });
