@@ -100,16 +100,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const exchangeSessionId = async (sessionId: string) => {
     try {
+      console.log('Exchanging session ID...');
       const response = await fetch(`${BACKEND_URL}/api/auth/callback?session_id=${sessionId}`, {
         credentials: 'include'
       });
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Got session token:', data.session_token ? 'present' : 'missing');
+        
+        // Save token to all storage methods
+        globalSessionToken = data.session_token;
         setSessionToken(data.session_token);
-        // Save token to storage
-        await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.session_token);
+        
+        try {
+          await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.session_token);
+          console.log('Token saved to AsyncStorage');
+        } catch (storageError) {
+          console.error('Failed to save to AsyncStorage:', storageError);
+        }
+        
         await checkAuth(data.session_token);
+      } else {
+        console.error('Failed to exchange session ID:', response.status);
       }
     } catch (error) {
       console.error('Error exchanging session ID:', error);
