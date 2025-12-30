@@ -144,6 +144,10 @@ export default function SellerDashboardScreen() {
 
   const showNotificationBanner = (count: number) => {
     setShowNewOrderBanner(true);
+    
+    // Play notification sound
+    soundManager.playOrderNotification();
+    
     // Animate banner sliding in
     Animated.spring(bannerAnim, {
       toValue: 0,
