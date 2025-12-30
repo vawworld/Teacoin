@@ -171,8 +171,12 @@ export default function AdminDashboardScreen() {
       <View style={styles.requestActions}>
         <TouchableOpacity
           style={styles.rejectBtn}
-          onPress={() => handleApproval(item.user_id, item.name, false)}
+          onPress={() => {
+            console.log('Reject button pressed for:', item.user_id, item.name);
+            handleApproval(item.user_id, item.name, false);
+          }}
           disabled={actionLoading === item.user_id}
+          activeOpacity={0.7}
         >
           {actionLoading === item.user_id ? (
             <ActivityIndicator size="small" color={COLORS.error} />
@@ -185,8 +189,12 @@ export default function AdminDashboardScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.approveBtn}
-          onPress={() => handleApproval(item.user_id, item.name, true)}
+          onPress={() => {
+            console.log('Approve button pressed for:', item.user_id, item.name);
+            handleApproval(item.user_id, item.name, true);
+          }}
           disabled={actionLoading === item.user_id}
+          activeOpacity={0.7}
         >
           {actionLoading === item.user_id ? (
             <ActivityIndicator size="small" color={COLORS.white} />
