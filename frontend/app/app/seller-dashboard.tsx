@@ -86,20 +86,21 @@ export default function SellerDashboardScreen() {
   const [newOrderCount, setNewOrderCount] = useState(0);
   const [showNewOrderBanner, setShowNewOrderBanner] = useState(false);
   const lastOrderIdsRef = useRef<Set<string>>(new Set());
-  const isFirstLoadRef = useRef(true);
+  const isInitializedRef = useRef(false);
   const bannerAnim = useRef(new Animated.Value(-100)).current;
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
 
   useFocusEffect(
     useCallback(() => {
+      // Reset initialization flag when screen gains focus
+      isInitializedRef.current = false;
       loadData();
-      // Start polling for new orders every 10 seconds
-      startPolling();
       
       return () => {
         // Stop polling when screen loses focus
         if (pollingInterval.current) {
           clearInterval(pollingInterval.current);
+          pollingInterval.current = null;
         }
       };
     }, [])
@@ -111,17 +112,28 @@ export default function SellerDashboardScreen() {
       clearInterval(pollingInterval.current);
     }
     
-    // Poll every 10 seconds
+    console.log('🔄 Starting order polling (every 5 seconds)...');
+    
+    // Poll every 5 seconds for faster response
     pollingInterval.current = setInterval(() => {
-      checkForNewOrders();
-    }, 10000);
+      if (isInitializedRef.current) {
+        checkForNewOrders();
+      }
+    }, 5000);
   };
 
   const checkForNewOrders = async () => {
+    if (!sessionToken) {
+      console.log('❌ No session token for polling');
+      return;
+    }
+    
     try {
+      console.log('🔄 Checking for new orders...');
       const response = await fetch(`${BACKEND_URL}/api/orders/seller`, {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
+      
       if (response.ok) {
         const newOrders: Order[] = await response.json();
         
@@ -130,23 +142,27 @@ export default function SellerDashboardScreen() {
           o => !lastOrderIdsRef.current.has(o.order_id) && o.status === 'pending'
         );
         
-        console.log('📦 Polling orders - Total:', newOrders.length, 'New pending:', newPendingOrders.length);
+        console.log('📦 Orders check - Known IDs:', lastOrderIdsRef.current.size, 
+                    'Total now:', newOrders.length, 
+                    'New pending:', newPendingOrders.length);
         
         // Show notification if there are new pending orders
         if (newPendingOrders.length > 0) {
-          console.log('🔔 NEW ORDERS DETECTED!', newPendingOrders.map(o => o.order_id));
+          console.log('🔔 NEW ORDERS!', newPendingOrders.map(o => o.item_name));
           setNewOrderCount(newPendingOrders.length);
-          showNotificationBanner(newPendingOrders.length);
+          await showNotificationBanner(newPendingOrders.length);
           // Vibrate to alert the seller
-          Vibration.vibrate([0, 200, 100, 200]);
+          Vibration.vibrate([0, 300, 100, 300]);
         }
         
         // Update last order IDs with all current orders
         lastOrderIdsRef.current = new Set(newOrders.map(o => o.order_id));
         setOrders(newOrders);
+      } else {
+        console.log('❌ Polling failed:', response.status);
       }
     } catch (error) {
-      console.error('Error polling for orders:', error);
+      console.error('❌ Error polling for orders:', error);
     }
   };
 
