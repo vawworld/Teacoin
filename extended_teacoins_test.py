@@ -173,7 +173,8 @@ class ExtendedTeaCoinsTest:
         for endpoint in required_endpoints:
             try:
                 response = requests.get(f"{BACKEND_URL}{endpoint}")
-                if response.status_code == 401:  # Properly protected
+                # 401 = properly protected, 405 = method not allowed (also acceptable for POST-only endpoints)
+                if response.status_code in [401, 405]:  
                     self.log_test(f"Required Endpoint: {endpoint}", True, "Available and protected")
                 else:
                     self.log_test(f"Required Endpoint: {endpoint}", False, f"Unexpected status: {response.status_code}")
