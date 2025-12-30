@@ -81,7 +81,7 @@ export default function ProfileSetup() {
             picture,
           });
         }
-        router.replace('/(tabs)/chats');
+        router.replace('/(app)/(tabs)/chats');
       } else {
         Alert.alert('Error', 'Failed to update profile');
       }
