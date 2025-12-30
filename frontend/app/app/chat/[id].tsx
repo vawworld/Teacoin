@@ -12,8 +12,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useAuth } from '../../contexts/AuthContext';
-import { useSocket } from '../../contexts/SocketContext';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useSocket } from '../../../contexts/SocketContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { formatDistanceToNow } from 'date-fns';
