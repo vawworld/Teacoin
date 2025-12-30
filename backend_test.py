@@ -561,13 +561,17 @@ class TeaCoinsFlowTester:
         
         response = self.make_request("GET", "/orders/seller", headers=headers)
         
-        if response and response.status_code == 401:
+        if response is None:
+            self.log_test("Seller Order View", False,
+                         "Request failed for seller order view endpoint")
+            return False
+        elif response.status_code == 401:
             self.log_test("Seller Order View", True, 
                          "GET /api/orders/seller returns orders for the seller to fulfill")
             return True
         else:
             self.log_test("Seller Order View", False,
-                         "Seller order view endpoint not accessible")
+                         f"Unexpected response: Expected 401, got {response.status_code}")
             return False
     
     def test_buyer_order_view(self):
