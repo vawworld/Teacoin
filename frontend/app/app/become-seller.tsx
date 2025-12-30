@@ -214,12 +214,16 @@ export default function BecomeSellerScreen() {
         {status?.seller_status === 'pending' ? (
           <View style={styles.statusCard}>
             <View style={styles.pendingIcon}>
-              <Ionicons name="time" size={32} color={COLORS.warning} />
+              <Ionicons name="hourglass" size={32} color={COLORS.warning} />
             </View>
-            <Text style={styles.statusTitle}>Application Pending</Text>
+            <Text style={styles.statusTitle}>⏳ Waiting for Approval</Text>
             <Text style={styles.statusText}>
-              Your seller application is being reviewed.{"\n"}You'll be notified once it's approved.
+              Your seller application is being reviewed by the admin.{"\n"}You'll be notified once it's approved.
             </Text>
+            <View style={styles.statusBadge}>
+              <Ionicons name="time-outline" size={16} color={COLORS.warning} />
+              <Text style={styles.statusBadgeText}>Under Review</Text>
+            </View>
             <TouchableOpacity
               style={styles.withdrawBtn}
               onPress={withdrawApplication}
