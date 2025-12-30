@@ -310,12 +310,25 @@ async def search_users(
         {
             "$or": [
                 {"profession": {"$regex": query_lower, "$options": "i"}},
-                {"skills": {"$regex": query_lower, "$options": "i"}}
+                {"skills": {"$regex": query_lower, "$options": "i"}},
+                {"name": {"$regex": query_lower, "$options": "i"}}
             ],
             "user_id": {"$ne": current_user.user_id}
         },
         {"_id": 0}
     ).to_list(50)
+    
+    return users
+
+@api_router.get("/users/all")
+async def get_all_users(
+    current_user: User = Depends(require_auth)
+):
+    """Get all users except current user"""
+    users = await db.users.find(
+        {"user_id": {"$ne": current_user.user_id}},
+        {"_id": 0}
+    ).to_list(100)
     
     return users
 
