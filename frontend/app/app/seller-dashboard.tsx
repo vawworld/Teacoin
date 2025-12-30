@@ -434,7 +434,17 @@ export default function SellerDashboardScreen() {
       )}
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => {
+            // Try to go back, fallback to wallet screen
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/app/(tabs)/wallet');
+            }
+          }}
+        >
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
