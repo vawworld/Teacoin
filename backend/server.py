@@ -841,14 +841,17 @@ async def create_order(
     if not item:
         raise HTTPException(status_code=404, detail="Menu item not found or not available")
     
+    # Get the item price (default to 1 if not set)
+    item_price = item.get("price", 1)
+    
     # Check if buyer has enough TeaCoins
     buyer = await db.users.find_one(
         {"user_id": current_user.user_id},
         {"_id": 0, "teacoins": 1}
     )
     
-    if buyer.get("teacoins", 0) < TEA_ORDER_COST:
-        raise HTTPException(status_code=400, detail="Not enough TeaCoins")
+    if buyer.get("teacoins", 0) < item_price:
+        raise HTTPException(status_code=400, detail=f"Not enough TeaCoins. You need {item_price} TeaCoins.")
     
     # Can't order from yourself
     if item["seller_id"] == current_user.user_id:
@@ -866,6 +869,7 @@ async def create_order(
         "seller_name": item["seller_name"],
         "item_id": item["item_id"],
         "item_name": item["name"],
+        "price": item_price,
         "status": "pending",
         "created_at": now,
         "updated_at": now,
@@ -878,7 +882,7 @@ async def create_order(
     # Deduct TeaCoins from buyer (held in escrow until confirmed)
     await db.users.update_one(
         {"user_id": current_user.user_id},
-        {"$inc": {"teacoins": -TEA_ORDER_COST}}
+        {"$inc": {"teacoins": -item_price}}
     )
     
     order["created_at"] = order["created_at"].isoformat()
