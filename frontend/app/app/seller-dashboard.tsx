@@ -85,14 +85,15 @@ export default function SellerDashboardScreen() {
   // Notification state
   const [newOrderCount, setNewOrderCount] = useState(0);
   const [showNewOrderBanner, setShowNewOrderBanner] = useState(false);
-  const [lastOrderCount, setLastOrderCount] = useState(0);
+  const lastOrderIdsRef = useRef<Set<string>>(new Set());
+  const isFirstLoadRef = useRef(true);
   const bannerAnim = useRef(new Animated.Value(-100)).current;
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       loadData();
-      // Start polling for new orders every 15 seconds
+      // Start polling for new orders every 10 seconds
       startPolling();
       
       return () => {
@@ -110,10 +111,10 @@ export default function SellerDashboardScreen() {
       clearInterval(pollingInterval.current);
     }
     
-    // Poll every 15 seconds
+    // Poll every 10 seconds
     pollingInterval.current = setInterval(() => {
       checkForNewOrders();
-    }, 15000);
+    }, 10000);
   };
 
   const checkForNewOrders = async () => {
@@ -123,18 +124,27 @@ export default function SellerDashboardScreen() {
       });
       if (response.ok) {
         const newOrders: Order[] = await response.json();
-        const pendingOrders = newOrders.filter(o => o.status === 'pending');
         
-        // Check if there are new pending orders since last check
-        if (pendingOrders.length > lastOrderCount && lastOrderCount > 0) {
-          const newCount = pendingOrders.length - lastOrderCount;
-          setNewOrderCount(newCount);
-          showNotificationBanner(newCount);
+        // Get current order IDs
+        const currentOrderIds = new Set(newOrders.map(o => o.order_id));
+        
+        // Find truly new orders (not in our previous set)
+        const newOrderIds = newOrders.filter(
+          o => !lastOrderIdsRef.current.has(o.order_id) && o.status === 'pending'
+        );
+        
+        // Only show notification if not first load and there are new orders
+        if (!isFirstLoadRef.current && newOrderIds.length > 0) {
+          console.log('🔔 New orders detected:', newOrderIds.length);
+          setNewOrderCount(newOrderIds.length);
+          showNotificationBanner(newOrderIds.length);
           // Vibrate to alert the seller
           Vibration.vibrate([0, 200, 100, 200]);
         }
         
-        setLastOrderCount(pendingOrders.length);
+        // Update last order IDs
+        lastOrderIdsRef.current = currentOrderIds;
+        isFirstLoadRef.current = false;
         setOrders(newOrders);
       }
     } catch (error) {
@@ -142,11 +152,17 @@ export default function SellerDashboardScreen() {
     }
   };
 
-  const showNotificationBanner = (count: number) => {
+  const showNotificationBanner = async (count: number) => {
     setShowNewOrderBanner(true);
     
     // Play notification sound
-    soundManager.playOrderNotification();
+    console.log('🔊 Playing order notification sound...');
+    try {
+      await soundManager.playOrderNotification();
+      console.log('🔊 Sound played successfully');
+    } catch (err) {
+      console.error('🔊 Sound error:', err);
+    }
     
     // Animate banner sliding in
     Animated.spring(bannerAnim, {
