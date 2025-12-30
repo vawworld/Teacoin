@@ -1058,6 +1058,9 @@ async def cancel_order(
     if order["status"] in ["delivered", "confirmed", "cancelled"]:
         raise HTTPException(status_code=400, detail=f"Cannot cancel order in '{order['status']}' status")
     
+    # Get the price from the order (default to 1 for old orders)
+    order_price = order.get("price", 1)
+    
     now = datetime.now(timezone.utc)
     
     # Update order status
@@ -1074,7 +1077,7 @@ async def cancel_order(
     # Refund TeaCoin to buyer
     await db.users.update_one(
         {"user_id": order["buyer_id"]},
-        {"$inc": {"teacoins": TEA_ORDER_COST}}
+        {"$inc": {"teacoins": order_price}}
     )
     
     # Create refund transaction
@@ -1083,14 +1086,14 @@ async def cancel_order(
         "transaction_id": transaction_id,
         "from_user_id": None,  # System refund
         "to_user_id": order["buyer_id"],
-        "amount": TEA_ORDER_COST,
+        "amount": order_price,
         "transaction_type": "refund",
         "order_id": order_id,
-        "description": f"Refund for cancelled order: {order['item_name']}",
+        "description": f"Refund for cancelled order: {order['item_name']} ({order_price} TeaCoin{'s' if order_price > 1 else ''})",
         "timestamp": now
     })
     
-    return {"message": "Order cancelled. TeaCoin refunded."}
+    return {"message": f"Order cancelled. {order_price} TeaCoin{'s' if order_price > 1 else ''} refunded."}
 
 # ==================== CONVERSATION ROUTES ====================
 
