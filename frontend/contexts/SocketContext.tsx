@@ -23,7 +23,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     if (sessionToken) {
       const newSocket = io(BACKEND_URL!, {
-        path: '/api/socket.io/',
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionDelay: 1000,
