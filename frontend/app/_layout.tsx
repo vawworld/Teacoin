@@ -1,16 +1,23 @@
-import { Stack } from 'expo-router';
+import { Slot, SplashScreen } from 'expo-router';
 import { AuthProvider } from '../contexts/AuthContext';
 import { SocketProvider } from '../contexts/SocketContext';
+import { useEffect } from 'react';
+
+// Prevent the splash screen from auto-hiding
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  useEffect(() => {
+    // Hide splash screen after a short delay
+    setTimeout(() => {
+      SplashScreen.hideAsync();
+    }, 1000);
+  }, []);
+
   return (
     <AuthProvider>
       <SocketProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="auth" />
-          <Stack.Screen name="app" />
-        </Stack>
+        <Slot />
       </SocketProvider>
     </AuthProvider>
   );
