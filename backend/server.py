@@ -627,7 +627,16 @@ async def approve_seller(
     approve: bool = True,
     current_user: User = Depends(require_auth)
 ):
-    """Approve or reject a seller request (admin only - for MVP any user can access)"""
+    """Approve or reject a seller request (admin only)"""
+    # Check if current user is admin
+    admin_user = await db.users.find_one(
+        {"user_id": current_user.user_id},
+        {"_id": 0, "is_admin": 1}
+    )
+    
+    if not admin_user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Only admins can approve sellers")
+    
     user = await db.users.find_one(
         {"user_id": user_id},
         {"_id": 0}
@@ -660,6 +669,30 @@ async def approve_seller(
             }
         )
         return {"message": f"Seller request rejected for {user['name']}"}
+
+@api_router.get("/admin/stats")
+async def get_admin_stats(current_user: User = Depends(require_auth)):
+    """Get admin dashboard statistics"""
+    # Check if current user is admin
+    admin_user = await db.users.find_one(
+        {"user_id": current_user.user_id},
+        {"_id": 0, "is_admin": 1}
+    )
+    
+    if not admin_user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Only admins can view stats")
+    
+    total_users = await db.users.count_documents({})
+    total_sellers = await db.users.count_documents({"is_seller": True, "seller_status": "approved"})
+    pending_requests = await db.users.count_documents({"seller_status": "pending"})
+    total_orders = await db.orders.count_documents({})
+    
+    return {
+        "total_users": total_users,
+        "total_sellers": total_sellers,
+        "pending_requests": pending_requests,
+        "total_orders": total_orders
+    }
 
 # ==================== MENU ROUTES ====================
 
