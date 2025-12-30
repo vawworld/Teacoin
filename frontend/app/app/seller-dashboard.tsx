@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Vibration,
+  Animated,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter, useFocusEffect } from 'expo-router';
