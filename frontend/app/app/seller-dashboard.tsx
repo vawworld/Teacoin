@@ -224,7 +224,12 @@ export default function SellerDashboardScreen() {
 
   const addMenuItem = async () => {
     if (!newItemName.trim()) {
-      Alert.alert('Error', 'Please enter a name for your tea');
+      Alert.alert('Error', 'Please enter a name for your item');
+      return;
+    }
+    const price = parseInt(newItemPrice) || 1;
+    if (price < 1 || price > 100) {
+      Alert.alert('Error', 'Price must be between 1 and 100 TeaCoins');
       return;
     }
     setAddingItem(true);
@@ -235,13 +240,18 @@ export default function SellerDashboardScreen() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${sessionToken}`,
         },
-        body: JSON.stringify({ name: newItemName, description: newItemDesc || null }),
+        body: JSON.stringify({ 
+          name: newItemName, 
+          description: newItemDesc || null,
+          price: price
+        }),
       });
       if (response.ok) {
-        Alert.alert('Success! \ud83c\udf75', 'Menu item added!');
+        Alert.alert('Success! 🍵', `"${newItemName}" added for ${price} TeaCoin${price > 1 ? 's' : ''}!`);
         setShowAddModal(false);
         setNewItemName('');
         setNewItemDesc('');
+        setNewItemPrice('1');
         loadData();
       } else {
         const error = await response.json();
