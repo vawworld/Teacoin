@@ -580,6 +580,52 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  // Notification Banner Styles
+  notificationBanner: {
+    position: 'absolute',
+    top: 50,
+    left: 16,
+    right: 16,
+    zIndex: 1000,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  notificationContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.success,
+    padding: 16,
+  },
+  notificationIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  notificationTextContainer: {
+    flex: 1,
+  },
+  notificationTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.white,
+  },
+  notificationSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 2,
+  },
+  notificationClose: {
+    padding: 8,
+  },
   centered: {
     flex: 1,
     justifyContent: 'center',
