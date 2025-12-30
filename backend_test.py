@@ -607,13 +607,17 @@ class TeaCoinsFlowTester:
         
         response = self.make_request("GET", "/admin/seller-requests", headers=headers)
         
-        if response and response.status_code == 401:
+        if response is None:
+            self.log_test("Admin Endpoints", False,
+                         "Request failed for admin endpoints")
+            return False
+        elif response.status_code == 401:
             self.log_test("Admin Endpoints", True,
                          "Admin endpoints accessible. Note: Real admin user (11.kumarsambhav@gmail.com) with is_admin=true required")
             return True
         else:
             self.log_test("Admin Endpoints", False,
-                         "Admin endpoints not accessible")
+                         f"Unexpected response: Expected 401, got {response.status_code}")
             return False
     
     def run_complete_flow_test(self):
