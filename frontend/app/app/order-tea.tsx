@@ -79,48 +79,43 @@ export default function OrderTeaScreen() {
 
   const handleOrder = async (item: MenuItem) => {
     const price = item.price || 1;
-    Alert.alert(
-      'Confirm Order 🍵',
-      `Order "${item.name}" from ${item.seller_name} for ${price} TeaCoin${price > 1 ? 's' : ''}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Order Now',
-          onPress: async () => {
-            setOrdering(item.item_id);
-            try {
-              const response = await fetch(`${BACKEND_URL}/api/orders`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${sessionToken}`,
-                },
-                body: JSON.stringify({ item_id: item.item_id }),
-              });
-
-              if (response.ok) {
-                Alert.alert(
-                  'Order Placed! 🎉',
-                  `Your order is being prepared by ${item.seller_name}! (${price} TeaCoin${price > 1 ? 's' : ''} deducted)`,
-                  [
-                    { text: 'View Orders', onPress: () => router.push('/app/my-orders') },
-                    { text: 'OK' },
-                  ]
-                );
-                loadMenuItems();
-              } else {
-                const error = await response.json();
-                Alert.alert('Order Failed', error.detail || 'Failed to place order');
-              }
-            } catch (error) {
-              Alert.alert('Error', 'Failed to place order. Please try again.');
-            } finally {
-              setOrdering(null);
-            }
-          },
+    
+    // Direct order without confirmation dialog for better mobile compatibility
+    setOrdering(item.item_id);
+    try {
+      console.log('Placing order for item:', item.item_id);
+      const response = await fetch(`${BACKEND_URL}/api/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionToken}`,
         },
-      ]
-    );
+        body: JSON.stringify({ item_id: item.item_id }),
+      });
+
+      console.log('Order response status:', response.status);
+
+      if (response.ok) {
+        Alert.alert(
+          'Order Placed! 🎉',
+          `Your order is being prepared by ${item.seller_name}! (${price} TeaCoin${price > 1 ? 's' : ''} deducted)`,
+          [
+            { text: 'View Orders', onPress: () => router.push('/app/my-orders') },
+            { text: 'OK' },
+          ]
+        );
+        loadMenuItems();
+      } else {
+        const error = await response.json();
+        console.log('Order error:', error);
+        Alert.alert('Order Failed', error.detail || 'Failed to place order');
+      }
+    } catch (error) {
+      console.error('Order error:', error);
+      Alert.alert('Error', 'Failed to place order. Please try again.');
+    } finally {
+      setOrdering(null);
+    }
   };
 
   const renderMenuItem = ({ item }: { item: MenuItem }) => (
