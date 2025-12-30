@@ -166,17 +166,18 @@ export default function SellerDashboardScreen() {
     }
   };
 
-  const showNotificationBanner = async (count: number) => {
+  const playNotificationSound = () => {
+    console.log('🔊 Playing notification sound...');
+    soundManager.playOrderNotification()
+      .then(() => console.log('🔊 Sound played'))
+      .catch((err) => console.error('🔊 Sound error:', err));
+  };
+
+  const showNotificationBanner = (count: number) => {
     setShowNewOrderBanner(true);
     
     // Play notification sound
-    console.log('🔊 Playing order notification sound...');
-    try {
-      await soundManager.playOrderNotification();
-      console.log('🔊 Sound played successfully');
-    } catch (err) {
-      console.error('🔊 Sound error:', err);
-    }
+    playNotificationSound();
     
     // Animate banner sliding in
     Animated.spring(bannerAnim, {
