@@ -11,8 +11,24 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+// TEAFRIENDS Brand Colors
+const COLORS = {
+  primary: '#8B4513',
+  secondary: '#D2691E',
+  accent: '#F4A460',
+  background: '#FFF8DC',
+  cardBg: '#FFFAF0',
+  white: '#FFFFFF',
+  text: '#3E2723',
+  textLight: '#8D6E63',
+  success: '#4CAF50',
+  warning: '#FF9800',
+  error: '#f44336',
+};
 
 interface SellerStatus {
   is_seller: boolean;
@@ -36,10 +52,8 @@ export default function BecomeSellerScreen() {
       const response = await fetch(`${BACKEND_URL}/api/seller/status`, {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
-
       if (response.ok) {
-        const data = await response.json();
-        setStatus(data);
+        setStatus(await response.json());
       }
     } catch (error) {
       console.error('Error loading seller status:', error);
@@ -59,12 +73,11 @@ export default function BecomeSellerScreen() {
         },
         body: JSON.stringify({ apply: true }),
       });
-
       if (response.ok) {
         Alert.alert(
-          'Application Submitted! 🎉',
-          'Your seller application has been submitted. You will be notified once approved.',
-          [{ text: 'OK', onPress: () => loadSellerStatus() }]
+          'Application Submitted! \ud83c\udf89',
+          'Your seller application is under review. You\'ll be notified once approved.',
+          [{ text: 'OK', onPress: loadSellerStatus }]
         );
       } else {
         const error = await response.json();
@@ -97,7 +110,6 @@ export default function BecomeSellerScreen() {
                 },
                 body: JSON.stringify({ apply: false }),
               });
-
               if (response.ok) {
                 Alert.alert('Withdrawn', 'Your application has been withdrawn.');
                 loadSellerStatus();
@@ -116,41 +128,77 @@ export default function BecomeSellerScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0084ff" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  // Already approved seller
+  if (status?.is_seller && status?.seller_status === 'approved') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Seller Status</Text>
+          <View style={styles.headerRight} />
+        </View>
+
+        <View style={styles.content}>
+          <View style={styles.successIconBg}>
+            <Ionicons name="checkmark-circle" size={64} color={COLORS.success} />
+          </View>
+          <Text style={styles.successTitle}>You're a Seller! \ud83c\udf89</Text>
+          <Text style={styles.successSubtext}>
+            You can now create menu items and start earning TeaCoins!
+          </Text>
+          <TouchableOpacity
+            style={styles.dashboardBtn}
+            onPress={() => router.push('/app/seller-dashboard')}
+          >
+            <Ionicons name="storefront" size={20} color={COLORS.white} />
+            <Text style={styles.dashboardBtnText}>Go to Seller Dashboard</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Become a Seller</Text>
-        <View style={{ width: 24 }} />
+        <View style={styles.headerRight} />
       </View>
 
       <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="storefront" size={64} color="#FF9800" />
-        </View>
+        <LinearGradient
+          colors={['#FF9800', '#F57C00']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.iconGradient}
+        >
+          <Ionicons name="storefront" size={56} color={COLORS.white} />
+        </LinearGradient>
 
         <Text style={styles.title}>Sell Tea, Earn TeaCoins</Text>
         <Text style={styles.subtitle}>
-          Become a seller and share your favorite tea with others. Earn TeaCoins
-          for every order you fulfill!
+          Become a seller and share your favorite tea with the community.
+          Earn TeaCoins for every order you fulfill!
         </Text>
 
         {status?.seller_status === 'pending' ? (
           <View style={styles.statusCard}>
-            <View style={styles.statusIcon}>
-              <Ionicons name="time" size={32} color="#FF9800" />
+            <View style={styles.pendingIcon}>
+              <Ionicons name="time" size={32} color={COLORS.warning} />
             </View>
             <Text style={styles.statusTitle}>Application Pending</Text>
             <Text style={styles.statusText}>
-              Your seller application is being reviewed. You'll be notified once
-              it's approved.
+              Your seller application is being reviewed.{"\n"}You'll be notified once it's approved.
             </Text>
             <TouchableOpacity
               style={styles.withdrawBtn}
@@ -158,7 +206,7 @@ export default function BecomeSellerScreen() {
               disabled={submitting}
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="#f44336" />
+                <ActivityIndicator size="small" color={COLORS.error} />
               ) : (
                 <Text style={styles.withdrawBtnText}>Withdraw Application</Text>
               )}
@@ -166,13 +214,12 @@ export default function BecomeSellerScreen() {
           </View>
         ) : status?.seller_status === 'rejected' ? (
           <View style={styles.statusCard}>
-            <View style={[styles.statusIcon, { backgroundColor: '#ffebee' }]}>
-              <Ionicons name="close-circle" size={32} color="#f44336" />
+            <View style={[styles.pendingIcon, { backgroundColor: '#FFEBEE' }]}>
+              <Ionicons name="close-circle" size={32} color={COLORS.error} />
             </View>
             <Text style={styles.statusTitle}>Application Rejected</Text>
             <Text style={styles.statusText}>
-              Unfortunately, your seller application was not approved. You can try
-              again.
+              Unfortunately, your application was not approved.{"\n"}You can try again.
             </Text>
             <TouchableOpacity
               style={styles.applyBtn}
@@ -180,7 +227,7 @@ export default function BecomeSellerScreen() {
               disabled={submitting}
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
                 <Text style={styles.applyBtnText}>Apply Again</Text>
               )}
@@ -188,25 +235,37 @@ export default function BecomeSellerScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.benefits}>
+            <View style={styles.benefitsCard}>
               <Text style={styles.benefitsTitle}>Benefits</Text>
+              
               <View style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-                <Text style={styles.benefitText}>
-                  Earn 1 TeaCoin for every order delivered
-                </Text>
+                <View style={styles.benefitIcon}>
+                  <Ionicons name="cash" size={22} color={COLORS.success} />
+                </View>
+                <View style={styles.benefitContent}>
+                  <Text style={styles.benefitTitle}>Earn TeaCoins</Text>
+                  <Text style={styles.benefitText}>Get 1 TeaCoin for every order delivered</Text>
+                </View>
               </View>
+
               <View style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-                <Text style={styles.benefitText}>
-                  Create and manage your own tea menu
-                </Text>
+                <View style={styles.benefitIcon}>
+                  <Ionicons name="create" size={22} color={COLORS.info} />
+                </View>
+                <View style={styles.benefitContent}>
+                  <Text style={styles.benefitTitle}>Create Your Menu</Text>
+                  <Text style={styles.benefitText}>List your favorite teas for others to order</Text>
+                </View>
               </View>
+
               <View style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-                <Text style={styles.benefitText}>
-                  Connect with tea lovers in the community
-                </Text>
+                <View style={styles.benefitIcon}>
+                  <Ionicons name="people" size={22} color={COLORS.purple} />
+                </View>
+                <View style={styles.benefitContent}>
+                  <Text style={styles.benefitTitle}>Connect</Text>
+                  <Text style={styles.benefitText}>Meet tea lovers in your community</Text>
+                </View>
               </View>
             </View>
 
@@ -214,11 +273,15 @@ export default function BecomeSellerScreen() {
               style={styles.applyBtn}
               onPress={applyAsSeller}
               disabled={submitting}
+              activeOpacity={0.8}
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
-                <Text style={styles.applyBtnText}>Apply to Become a Seller</Text>
+                <>
+                  <Ionicons name="rocket" size={20} color={COLORS.white} />
+                  <Text style={styles.applyBtnText}>Apply to Become a Seller</Text>
+                </>
               )}
             </TouchableOpacity>
           </>
@@ -228,129 +291,221 @@ export default function BecomeSellerScreen() {
   );
 }
 
+const COLORS_EXTRA = {
+  info: '#2196F3',
+  purple: '#9C27B0',
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: COLORS.white,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  headerRight: {
+    width: 44,
   },
   content: {
     padding: 24,
     alignItems: 'center',
   },
-  iconContainer: {
+  iconGradient: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#FFF3E0',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
+    shadowColor: COLORS.warning,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
-    color: '#000',
+    color: COLORS.text,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 15,
+    color: COLORS.textLight,
     textAlign: 'center',
     marginTop: 12,
     lineHeight: 24,
+    paddingHorizontal: 16,
   },
-  benefits: {
+  benefitsCard: {
     width: '100%',
-    marginTop: 32,
-    marginBottom: 32,
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 24,
+    marginTop: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 4,
   },
   benefitsTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 20,
   },
   benefitItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
+    marginBottom: 20,
   },
-  benefitText: {
-    fontSize: 16,
-    color: '#333',
+  benefitIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  benefitContent: {
     flex: 1,
   },
+  benefitTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  benefitText: {
+    fontSize: 13,
+    color: COLORS.textLight,
+    marginTop: 2,
+  },
   applyBtn: {
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 25,
-    width: '100%',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.warning,
+    paddingHorizontal: 32,
+    paddingVertical: 18,
+    borderRadius: 16,
+    marginTop: 28,
+    width: '100%',
+    gap: 10,
+    shadowColor: COLORS.warning,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   applyBtnText: {
-    color: '#fff',
-    fontSize: 16,
+    color: COLORS.white,
+    fontSize: 17,
     fontWeight: '600',
   },
   statusCard: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    marginTop: 32,
     width: '100%',
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center',
+    marginTop: 28,
   },
-  statusIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  pendingIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: '#FFF3E0',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   statusTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
-    color: '#000',
+    color: COLORS.text,
     marginBottom: 8,
   },
   statusText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textLight,
     textAlign: 'center',
     lineHeight: 22,
   },
   withdrawBtn: {
-    marginTop: 20,
+    marginTop: 24,
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 20,
-    backgroundColor: '#ffebee',
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#FFEBEE',
   },
   withdrawBtnText: {
-    color: '#f44336',
+    color: COLORS.error,
+    fontWeight: '600',
+  },
+  successIconBg: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  successTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  successSubtext: {
+    fontSize: 15,
+    color: COLORS.textLight,
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 24,
+  },
+  dashboardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginTop: 28,
+    gap: 10,
+  },
+  dashboardBtnText: {
+    color: COLORS.white,
+    fontSize: 16,
     fontWeight: '600',
   },
 });

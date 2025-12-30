@@ -13,8 +13,24 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+// TEAFRIENDS Brand Colors
+const COLORS = {
+  primary: '#8B4513',
+  secondary: '#D2691E',
+  accent: '#F4A460',
+  background: '#FFF8DC',
+  cardBg: '#FFFAF0',
+  white: '#FFFFFF',
+  text: '#3E2723',
+  textLight: '#8D6E63',
+  success: '#4CAF50',
+  warning: '#FF9800',
+  error: '#f44336',
+};
 
 interface MenuItem {
   item_id: string;
@@ -45,10 +61,8 @@ export default function OrderTeaScreen() {
       const response = await fetch(`${BACKEND_URL}/api/menu`, {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
-
       if (response.ok) {
-        const data = await response.json();
-        setMenuItems(data);
+        setMenuItems(await response.json());
       }
     } catch (error) {
       console.error('Error loading menu:', error);
@@ -65,12 +79,12 @@ export default function OrderTeaScreen() {
 
   const handleOrder = async (item: MenuItem) => {
     Alert.alert(
-      'Confirm Order',
+      'Confirm Order \ud83c\udf75',
       `Order "${item.name}" from ${item.seller_name} for 1 TeaCoin?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Order',
+          text: 'Order Now',
           onPress: async () => {
             setOrdering(item.item_id);
             try {
@@ -85,16 +99,14 @@ export default function OrderTeaScreen() {
 
               if (response.ok) {
                 Alert.alert(
-                  'Order Placed! 🍵',
-                  `Your order for "${item.name}" has been placed. The seller will prepare it soon!`,
+                  'Order Placed! \ud83c\udf89',
+                  `Your tea is being prepared by ${item.seller_name}!`,
                   [
-                    {
-                      text: 'View Orders',
-                      onPress: () => router.push('/my-orders'),
-                    },
+                    { text: 'View Orders', onPress: () => router.push('/app/my-orders') },
                     { text: 'OK' },
                   ]
                 );
+                loadMenuItems();
               } else {
                 const error = await response.json();
                 Alert.alert('Order Failed', error.detail || 'Failed to place order');
@@ -111,44 +123,51 @@ export default function OrderTeaScreen() {
   };
 
   const renderMenuItem = ({ item }: { item: MenuItem }) => (
-    <View style={styles.menuItem}>
+    <View style={styles.menuCard}>
       <View style={styles.menuImageContainer}>
         {item.image ? (
           <Image source={{ uri: item.image }} style={styles.menuImage} />
         ) : (
-          <View style={styles.menuImagePlaceholder}>
-            <Ionicons name="cafe" size={40} color="#ccc" />
-          </View>
+          <LinearGradient
+            colors={['#D2691E', '#8B4513']}
+            style={styles.menuImagePlaceholder}
+          >
+            <Ionicons name="cafe" size={48} color="rgba(255,255,255,0.8)" />
+          </LinearGradient>
         )}
+        <View style={styles.priceTag}>
+          <Text style={styles.priceText}>1 \ud83c\udf75</Text>
+        </View>
       </View>
       <View style={styles.menuInfo}>
         <Text style={styles.menuName}>{item.name}</Text>
-        <Text style={styles.sellerName}>by {item.seller_name}</Text>
+        <View style={styles.sellerRow}>
+          <Ionicons name="person-circle" size={16} color={COLORS.textLight} />
+          <Text style={styles.sellerName}>{item.seller_name}</Text>
+        </View>
         {item.description && (
           <Text style={styles.menuDescription} numberOfLines={2}>
             {item.description}
           </Text>
         )}
-        <View style={styles.priceRow}>
-          <Text style={styles.price}>{item.price} 🍵</Text>
-          <TouchableOpacity
-            style={[
-              styles.orderButton,
-              ordering === item.item_id && styles.orderButtonDisabled,
-            ]}
-            onPress={() => handleOrder(item)}
-            disabled={ordering === item.item_id}
-          >
-            {ordering === item.item_id ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Ionicons name="cart" size={16} color="#fff" />
-                <Text style={styles.orderButtonText}>Order</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[
+            styles.orderButton,
+            ordering === item.item_id && styles.orderButtonDisabled,
+          ]}
+          onPress={() => handleOrder(item)}
+          disabled={ordering === item.item_id}
+          activeOpacity={0.8}
+        >
+          {ordering === item.item_id ? (
+            <ActivityIndicator size="small" color={COLORS.white} />
+          ) : (
+            <>
+              <Ionicons name="cart" size={18} color={COLORS.white} />
+              <Text style={styles.orderButtonText}>Order Now</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -156,7 +175,7 @@ export default function OrderTeaScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0084ff" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -164,19 +183,24 @@ export default function OrderTeaScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order Tea</Text>
-        <View style={{ width: 24 }} />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerSubtitle}>Browse & Order</Text>
+          <Text style={styles.headerTitle}>Tea Menu</Text>
+        </View>
+        <View style={styles.headerRight} />
       </View>
 
       {menuItems.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="cafe-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>No tea available</Text>
+          <View style={styles.emptyIconBg}>
+            <Ionicons name="cafe-outline" size={56} color={COLORS.textLight} />
+          </View>
+          <Text style={styles.emptyTitle}>No Tea Available</Text>
           <Text style={styles.emptySubtext}>
-            No sellers have listed their tea yet.
+            No sellers have listed their tea yet.{"\n"}Check back soon!
           </Text>
         </View>
       ) : (
@@ -185,8 +209,9 @@ export default function OrderTeaScreen() {
           renderItem={renderMenuItem}
           keyExtractor={(item) => item.item_id}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
           }
         />
       )}
@@ -197,45 +222,70 @@ export default function OrderTeaScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     paddingTop: 60,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  listContent: {
-    padding: 16,
-  },
-  menuItem: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 16,
-    overflow: 'hidden',
+    backgroundColor: COLORS.white,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 3,
   },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: COLORS.textLight,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginTop: 2,
+  },
+  headerRight: {
+    width: 44,
+  },
+  listContent: {
+    padding: 20,
+  },
+  menuCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    marginBottom: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
   menuImageContainer: {
-    height: 150,
-    backgroundColor: '#f0f0f0',
+    height: 160,
+    position: 'relative',
   },
   menuImage: {
     width: '100%',
@@ -247,49 +297,65 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  priceTag: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  priceText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
   menuInfo: {
-    padding: 16,
+    padding: 20,
   },
   menuName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  sellerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 6,
   },
   sellerName: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+    color: COLORS.textLight,
   },
   menuDescription: {
     fontSize: 14,
-    color: '#999',
-    marginTop: 8,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  price: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#4CAF50',
+    color: COLORS.textLight,
+    marginTop: 10,
+    lineHeight: 20,
   },
   orderButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 6,
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    borderRadius: 16,
+    marginTop: 16,
+    gap: 8,
   },
   orderButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: COLORS.textLight,
   },
   orderButtonText: {
-    color: '#fff',
+    color: COLORS.white,
+    fontSize: 16,
     fontWeight: '600',
   },
   emptyState: {
@@ -298,16 +364,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 16,
+  emptyIconBg: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: COLORS.textLight,
     marginTop: 8,
     textAlign: 'center',
+    lineHeight: 22,
   },
 });

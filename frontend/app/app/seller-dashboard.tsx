@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
@@ -11,6 +10,8 @@ import {
   Alert,
   TextInput,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -18,6 +19,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+// TEAFRIENDS Brand Colors
+const COLORS = {
+  primary: '#8B4513',
+  secondary: '#D2691E',
+  accent: '#F4A460',
+  background: '#FFF8DC',
+  cardBg: '#FFFAF0',
+  white: '#FFFFFF',
+  text: '#3E2723',
+  textLight: '#8D6E63',
+  success: '#4CAF50',
+  warning: '#FF9800',
+  error: '#f44336',
+  info: '#2196F3',
+  purple: '#9C27B0',
+};
 
 interface MenuItem {
   item_id: string;
@@ -35,13 +53,13 @@ interface Order {
   created_at: string;
 }
 
-const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string }> = {
-  pending: { color: '#FF9800', icon: 'time', label: 'Pending' },
-  preparing: { color: '#2196F3', icon: 'cafe', label: 'Preparing' },
-  ready: { color: '#9C27B0', icon: 'checkmark-circle', label: 'Ready' },
-  delivered: { color: '#4CAF50', icon: 'bicycle', label: 'Delivered' },
-  confirmed: { color: '#4CAF50', icon: 'checkmark-done', label: 'Completed' },
-  cancelled: { color: '#f44336', icon: 'close-circle', label: 'Cancelled' },
+const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string; bg: string }> = {
+  pending: { color: COLORS.warning, icon: 'time', label: 'New', bg: '#FFF3E0' },
+  preparing: { color: COLORS.info, icon: 'cafe', label: 'Preparing', bg: '#E3F2FD' },
+  ready: { color: COLORS.purple, icon: 'checkmark-circle', label: 'Ready', bg: '#F3E5F5' },
+  delivered: { color: COLORS.success, icon: 'bicycle', label: 'Delivered', bg: '#E8F5E9' },
+  confirmed: { color: COLORS.success, icon: 'checkmark-done', label: 'Done', bg: '#E8F5E9' },
+  cancelled: { color: COLORS.error, icon: 'close-circle', label: 'Cancelled', bg: '#FFEBEE' },
 };
 
 export default function SellerDashboardScreen() {
@@ -54,7 +72,6 @@ export default function SellerDashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   
-  // Add menu modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemDesc, setNewItemDesc] = useState('');
@@ -76,16 +93,8 @@ export default function SellerDashboardScreen() {
           headers: { Authorization: `Bearer ${sessionToken}` },
         }),
       ]);
-
-      if (ordersRes.ok) {
-        const ordersData = await ordersRes.json();
-        setOrders(ordersData);
-      }
-
-      if (menuRes.ok) {
-        const menuData = await menuRes.json();
-        setMenuItems(menuData);
-      }
+      if (ordersRes.ok) setOrders(await ordersRes.json());
+      if (menuRes.ok) setMenuItems(await menuRes.json());
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -110,7 +119,6 @@ export default function SellerDashboardScreen() {
         },
         body: JSON.stringify({ status: newStatus }),
       });
-
       if (response.ok) {
         loadData();
       } else {
@@ -129,7 +137,6 @@ export default function SellerDashboardScreen() {
       Alert.alert('Error', 'Please enter a name for your tea');
       return;
     }
-
     setAddingItem(true);
     try {
       const response = await fetch(`${BACKEND_URL}/api/menu`, {
@@ -138,14 +145,10 @@ export default function SellerDashboardScreen() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${sessionToken}`,
         },
-        body: JSON.stringify({
-          name: newItemName,
-          description: newItemDesc || null,
-        }),
+        body: JSON.stringify({ name: newItemName, description: newItemDesc || null }),
       });
-
       if (response.ok) {
-        Alert.alert('Success', 'Menu item added!');
+        Alert.alert('Success! \ud83c\udf75', 'Menu item added!');
         setShowAddModal(false);
         setNewItemName('');
         setNewItemDesc('');
@@ -163,7 +166,7 @@ export default function SellerDashboardScreen() {
 
   const toggleItemAvailability = async (item: MenuItem) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/menu/${item.item_id}`, {
+      await fetch(`${BACKEND_URL}/api/menu/${item.item_id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -171,41 +174,31 @@ export default function SellerDashboardScreen() {
         },
         body: JSON.stringify({ available: !item.available }),
       });
-
-      if (response.ok) {
-        loadData();
-      }
+      loadData();
     } catch (error) {
       Alert.alert('Error', 'Failed to update item');
     }
   };
 
   const deleteMenuItem = async (item: MenuItem) => {
-    Alert.alert(
-      'Delete Item',
-      `Delete "${item.name}" from your menu?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await fetch(`${BACKEND_URL}/api/menu/${item.item_id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${sessionToken}` },
-              });
-
-              if (response.ok) {
-                loadData();
-              }
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete item');
-            }
-          },
+    Alert.alert('Delete Item', `Delete "${item.name}" from your menu?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await fetch(`${BACKEND_URL}/api/menu/${item.item_id}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${sessionToken}` },
+            });
+            loadData();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete item');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const getNextStatus = (currentStatus: string): string | null => {
@@ -224,11 +217,9 @@ export default function SellerDashboardScreen() {
     return (
       <View style={styles.orderCard}>
         <View style={styles.orderHeader}>
-          <View style={[styles.statusBadge, { backgroundColor: status.color + '20' }]}>
+          <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
             <Ionicons name={status.icon as any} size={14} color={status.color} />
-            <Text style={[styles.statusText, { color: status.color }]}>
-              {status.label}
-            </Text>
+            <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
           </View>
           <Text style={styles.orderTime}>
             {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
@@ -236,8 +227,13 @@ export default function SellerDashboardScreen() {
         </View>
 
         <View style={styles.orderDetails}>
-          <Text style={styles.orderItem}>{item.item_name}</Text>
-          <Text style={styles.orderBuyer}>for {item.buyer_name}</Text>
+          <View style={styles.orderIconBg}>
+            <Ionicons name="cafe" size={20} color={COLORS.primary} />
+          </View>
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderItem}>{item.item_name}</Text>
+            <Text style={styles.orderBuyer}>for {item.buyer_name}</Text>
+          </View>
         </View>
 
         {nextStatus && (
@@ -245,13 +241,15 @@ export default function SellerDashboardScreen() {
             style={[styles.statusBtn, { backgroundColor: STATUS_CONFIG[nextStatus].color }]}
             onPress={() => updateOrderStatus(item.order_id, nextStatus)}
             disabled={actionLoading === item.order_id}
+            activeOpacity={0.8}
           >
             {actionLoading === item.order_id ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={COLORS.white} />
             ) : (
-              <Text style={styles.statusBtnText}>
-                Mark as {STATUS_CONFIG[nextStatus].label}
-              </Text>
+              <>
+                <Ionicons name={STATUS_CONFIG[nextStatus].icon as any} size={18} color={COLORS.white} />
+                <Text style={styles.statusBtnText}>Mark as {STATUS_CONFIG[nextStatus].label}</Text>
+              </>
             )}
           </TouchableOpacity>
         )}
@@ -261,31 +259,24 @@ export default function SellerDashboardScreen() {
 
   const renderMenuItem = ({ item }: { item: MenuItem }) => (
     <View style={styles.menuCard}>
+      <View style={styles.menuIconBg}>
+        <Ionicons name="cafe" size={24} color={COLORS.primary} />
+      </View>
       <View style={styles.menuInfo}>
         <Text style={styles.menuName}>{item.name}</Text>
-        {item.description && (
-          <Text style={styles.menuDesc}>{item.description}</Text>
-        )}
-        <Text style={[styles.menuAvail, { color: item.available ? '#4CAF50' : '#f44336' }]}>
-          {item.available ? 'Available' : 'Unavailable'}
-        </Text>
+        {item.description && <Text style={styles.menuDesc} numberOfLines={1}>{item.description}</Text>}
+        <View style={[styles.availBadge, { backgroundColor: item.available ? '#E8F5E9' : '#FFEBEE' }]}>
+          <Text style={[styles.availText, { color: item.available ? COLORS.success : COLORS.error }]}>
+            {item.available ? 'Available' : 'Hidden'}
+          </Text>
+        </View>
       </View>
       <View style={styles.menuActions}>
-        <TouchableOpacity
-          style={styles.menuActionBtn}
-          onPress={() => toggleItemAvailability(item)}
-        >
-          <Ionicons
-            name={item.available ? 'eye-off' : 'eye'}
-            size={20}
-            color="#666"
-          />
+        <TouchableOpacity style={styles.menuActionBtn} onPress={() => toggleItemAvailability(item)}>
+          <Ionicons name={item.available ? 'eye-off' : 'eye'} size={20} color={COLORS.textLight} />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.menuActionBtn}
-          onPress={() => deleteMenuItem(item)}
-        >
-          <Ionicons name="trash" size={20} color="#f44336" />
+        <TouchableOpacity style={styles.menuActionBtn} onPress={() => deleteMenuItem(item)}>
+          <Ionicons name="trash" size={20} color={COLORS.error} />
         </TouchableOpacity>
       </View>
     </View>
@@ -294,41 +285,57 @@ export default function SellerDashboardScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0084ff" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
-  const activeOrders = orders.filter((o) =>
-    ['pending', 'preparing', 'ready'].includes(o.status)
-  );
+  const activeOrders = orders.filter((o) => ['pending', 'preparing', 'ready'].includes(o.status));
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Seller Dashboard</Text>
-        <View style={{ width: 24 }} />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerSubtitle}>Manage your</Text>
+          <Text style={styles.headerTitle}>Tea Shop</Text>
+        </View>
+        <View style={styles.headerRight} />
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabs}>
+      <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'orders' && styles.activeTab]}
           onPress={() => setActiveTab('orders')}
         >
+          <Ionicons 
+            name="receipt" 
+            size={20} 
+            color={activeTab === 'orders' ? COLORS.primary : COLORS.textLight} 
+          />
           <Text style={[styles.tabText, activeTab === 'orders' && styles.activeTabText]}>
-            Orders ({activeOrders.length})
+            Orders
           </Text>
+          {activeOrders.length > 0 && (
+            <View style={styles.tabBadge}>
+              <Text style={styles.tabBadgeText}>{activeOrders.length}</Text>
+            </View>
+          )}
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'menu' && styles.activeTab]}
           onPress={() => setActiveTab('menu')}
         >
+          <Ionicons 
+            name="cafe" 
+            size={20} 
+            color={activeTab === 'menu' ? COLORS.primary : COLORS.textLight} 
+          />
           <Text style={[styles.tabText, activeTab === 'menu' && styles.activeTabText]}>
-            Menu ({menuItems.length})
+            Menu
           </Text>
         </TouchableOpacity>
       </View>
@@ -336,8 +343,11 @@ export default function SellerDashboardScreen() {
       {activeTab === 'orders' ? (
         activeOrders.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="receipt-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No pending orders</Text>
+            <View style={styles.emptyIconBg}>
+              <Ionicons name="receipt-outline" size={48} color={COLORS.textLight} />
+            </View>
+            <Text style={styles.emptyTitle}>No Pending Orders</Text>
+            <Text style={styles.emptySubtext}>New orders will appear here</Text>
           </View>
         ) : (
           <FlatList
@@ -345,26 +355,26 @@ export default function SellerDashboardScreen() {
             renderItem={renderOrder}
             keyExtractor={(item) => item.order_id}
             contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
             }
           />
         )
       ) : (
         <>
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => setShowAddModal(true)}
-          >
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={styles.addBtnText}>Add Tea Item</Text>
+          <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)} activeOpacity={0.8}>
+            <Ionicons name="add-circle" size={22} color={COLORS.white} />
+            <Text style={styles.addBtnText}>Add New Tea</Text>
           </TouchableOpacity>
 
           {menuItems.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="cafe-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>No menu items yet</Text>
-              <Text style={styles.emptySubtext}>Add your first tea item</Text>
+              <View style={styles.emptyIconBg}>
+                <Ionicons name="cafe-outline" size={48} color={COLORS.textLight} />
+              </View>
+              <Text style={styles.emptyTitle}>No Menu Items</Text>
+              <Text style={styles.emptySubtext}>Add your first tea to get started</Text>
             </View>
           ) : (
             <FlatList
@@ -372,8 +382,9 @@ export default function SellerDashboardScreen() {
               renderItem={renderMenuItem}
               keyExtractor={(item) => item.item_id}
               contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
               refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
               }
             />
           )}
@@ -382,20 +393,32 @@ export default function SellerDashboardScreen() {
 
       {/* Add Item Modal */}
       <Modal visible={showAddModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Tea Item</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add New Tea</Text>
+              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <Ionicons name="close" size={24} color={COLORS.textLight} />
+              </TouchableOpacity>
+            </View>
             
+            <Text style={styles.inputLabel}>Tea Name *</Text>
             <TextInput
               style={styles.input}
-              placeholder="Tea Name (e.g., Green Tea)"
+              placeholder="e.g., Green Tea, Chai Latte"
+              placeholderTextColor={COLORS.textLight}
               value={newItemName}
               onChangeText={setNewItemName}
             />
             
+            <Text style={styles.inputLabel}>Description</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Description (optional)"
+              placeholder="Tell customers about this tea..."
+              placeholderTextColor={COLORS.textLight}
               value={newItemDesc}
               onChangeText={setNewItemDesc}
               multiline
@@ -415,14 +438,17 @@ export default function SellerDashboardScreen() {
                 disabled={addingItem}
               >
                 {addingItem ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color={COLORS.white} />
                 ) : (
-                  <Text style={styles.addModalBtnText}>Add Item</Text>
+                  <>
+                    <Ionicons name="add" size={20} color={COLORS.white} />
+                    <Text style={styles.addModalBtnText}>Add Tea</Text>
+                  </>
                 )}
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -431,73 +457,125 @@ export default function SellerDashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     paddingTop: 60,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: COLORS.white,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: COLORS.textLight,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginTop: 2,
   },
-  tabs: {
+  headerRight: {
+    width: 44,
+  },
+  tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    gap: 12,
   },
   tab: {
     flex: 1,
-    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: COLORS.background,
+    gap: 8,
   },
   activeTab: {
-    borderBottomColor: '#FF9800',
+    backgroundColor: '#FFF8DC',
+    borderWidth: 2,
+    borderColor: COLORS.primary,
   },
   tabText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textLight,
     fontWeight: '500',
   },
   activeTabText: {
-    color: '#FF9800',
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  tabBadge: {
+    backgroundColor: COLORS.error,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  tabBadgeText: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: 'bold',
   },
   listContent: {
-    padding: 16,
+    padding: 20,
   },
   orderCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
   },
   statusText: {
     fontSize: 12,
@@ -505,51 +583,85 @@ const styles = StyleSheet.create({
   },
   orderTime: {
     fontSize: 12,
-    color: '#999',
+    color: COLORS.textLight,
   },
   orderDetails: {
-    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  orderIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  orderInfo: {
+    flex: 1,
   },
   orderItem: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: COLORS.text,
   },
   orderBuyer: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+    color: COLORS.textLight,
+    marginTop: 2,
   },
   statusBtn: {
-    paddingVertical: 10,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 16,
+    gap: 8,
   },
   statusBtnText: {
-    color: '#fff',
+    color: COLORS.white,
     fontWeight: '600',
+    fontSize: 15,
   },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF9800',
-    margin: 16,
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    margin: 20,
+    marginBottom: 0,
+    padding: 16,
+    borderRadius: 16,
     gap: 8,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   addBtnText: {
-    color: '#fff',
+    color: COLORS.white,
+    fontSize: 16,
     fontWeight: '600',
   },
   menuCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  menuIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
   },
   menuInfo: {
     flex: 1,
@@ -557,24 +669,30 @@ const styles = StyleSheet.create({
   menuName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: COLORS.text,
   },
   menuDesc: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+    fontSize: 13,
+    color: COLORS.textLight,
+    marginTop: 2,
   },
-  menuAvail: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 4,
+  availBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    marginTop: 6,
+  },
+  availText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   menuActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 4,
   },
   menuActionBtn: {
-    padding: 8,
+    padding: 10,
   },
   emptyState: {
     flex: 1,
@@ -582,70 +700,96 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
-  emptyText: {
+  emptyIconBg: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#666',
-    marginTop: 16,
+    color: COLORS.text,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: COLORS.textLight,
     marginTop: 8,
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 24,
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 24,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  inputLabel: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#000',
-    marginBottom: 20,
+    color: COLORS.text,
+    marginBottom: 8,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: COLORS.background,
+    borderRadius: 14,
+    padding: 16,
     fontSize: 16,
-    marginBottom: 16,
+    marginBottom: 20,
+    color: COLORS.text,
   },
   textArea: {
-    height: 80,
+    height: 100,
     textAlignVertical: 'top',
   },
   modalActions: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 8,
   },
   cancelModalBtn: {
     flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: COLORS.background,
     alignItems: 'center',
   },
   cancelModalBtnText: {
-    color: '#666',
+    color: COLORS.textLight,
     fontWeight: '600',
+    fontSize: 16,
   },
   addModalBtn: {
     flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    backgroundColor: '#FF9800',
+    flexDirection: 'row',
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   addModalBtnText: {
-    color: '#fff',
+    color: COLORS.white,
     fontWeight: '600',
+    fontSize: 16,
   },
 });

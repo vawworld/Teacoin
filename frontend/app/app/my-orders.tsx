@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,23 @@ import { formatDistanceToNow } from 'date-fns';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
+// TEAFRIENDS Brand Colors
+const COLORS = {
+  primary: '#8B4513',
+  secondary: '#D2691E',
+  accent: '#F4A460',
+  background: '#FFF8DC',
+  cardBg: '#FFFAF0',
+  white: '#FFFFFF',
+  text: '#3E2723',
+  textLight: '#8D6E63',
+  success: '#4CAF50',
+  warning: '#FF9800',
+  error: '#f44336',
+  info: '#2196F3',
+  purple: '#9C27B0',
+};
+
 interface Order {
   order_id: string;
   buyer_id: string;
@@ -31,17 +48,17 @@ interface Order {
   confirmed_at: string | null;
 }
 
-const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string }> = {
-  pending: { color: '#FF9800', icon: 'time', label: 'Pending' },
-  preparing: { color: '#2196F3', icon: 'cafe', label: 'Preparing' },
-  ready: { color: '#9C27B0', icon: 'checkmark-circle', label: 'Ready' },
-  delivered: { color: '#4CAF50', icon: 'bicycle', label: 'Delivered' },
-  confirmed: { color: '#4CAF50', icon: 'checkmark-done', label: 'Completed' },
-  cancelled: { color: '#f44336', icon: 'close-circle', label: 'Cancelled' },
+const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string; bg: string }> = {
+  pending: { color: COLORS.warning, icon: 'time', label: 'Pending', bg: '#FFF3E0' },
+  preparing: { color: COLORS.info, icon: 'cafe', label: 'Preparing', bg: '#E3F2FD' },
+  ready: { color: COLORS.purple, icon: 'checkmark-circle', label: 'Ready', bg: '#F3E5F5' },
+  delivered: { color: COLORS.success, icon: 'bicycle', label: 'Delivered', bg: '#E8F5E9' },
+  confirmed: { color: COLORS.success, icon: 'checkmark-done', label: 'Completed', bg: '#E8F5E9' },
+  cancelled: { color: COLORS.error, icon: 'close-circle', label: 'Cancelled', bg: '#FFEBEE' },
 };
 
 export default function MyOrdersScreen() {
-  const { sessionToken, user } = useAuth();
+  const { sessionToken } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,10 +76,8 @@ export default function MyOrdersScreen() {
       const response = await fetch(`${BACKEND_URL}/api/orders`, {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
-
       if (response.ok) {
-        const data = await response.json();
-        setOrders(data);
+        setOrders(await response.json());
       }
     } catch (error) {
       console.error('Error loading orders:', error);
@@ -79,8 +94,8 @@ export default function MyOrdersScreen() {
 
   const confirmDelivery = async (order: Order) => {
     Alert.alert(
-      'Confirm Delivery',
-      `Confirm that you received "${order.item_name}"? This will transfer 1 TeaCoin to the seller.`,
+      'Confirm Delivery \u2615',
+      `Confirm you received "${order.item_name}"?\nThis will transfer 1 TeaCoin to ${order.seller_name}.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -90,14 +105,10 @@ export default function MyOrdersScreen() {
             try {
               const response = await fetch(
                 `${BACKEND_URL}/api/orders/${order.order_id}/confirm`,
-                {
-                  method: 'POST',
-                  headers: { Authorization: `Bearer ${sessionToken}` },
-                }
+                { method: 'POST', headers: { Authorization: `Bearer ${sessionToken}` } }
               );
-
               if (response.ok) {
-                Alert.alert('Success', 'Delivery confirmed! TeaCoin transferred to seller.');
+                Alert.alert('Thank You! \ud83c\udf75', 'Delivery confirmed. TeaCoin sent to seller!');
                 loadOrders();
               } else {
                 const error = await response.json();
@@ -117,7 +128,7 @@ export default function MyOrdersScreen() {
   const cancelOrder = async (order: Order) => {
     Alert.alert(
       'Cancel Order',
-      `Cancel order for "${order.item_name}"? Your TeaCoin will be refunded.`,
+      `Cancel order for "${order.item_name}"?\nYour TeaCoin will be refunded.`,
       [
         { text: 'No', style: 'cancel' },
         {
@@ -128,12 +139,8 @@ export default function MyOrdersScreen() {
             try {
               const response = await fetch(
                 `${BACKEND_URL}/api/orders/${order.order_id}/cancel`,
-                {
-                  method: 'POST',
-                  headers: { Authorization: `Bearer ${sessionToken}` },
-                }
+                { method: 'POST', headers: { Authorization: `Bearer ${sessionToken}` } }
               );
-
               if (response.ok) {
                 Alert.alert('Cancelled', 'Order cancelled. TeaCoin refunded.');
                 loadOrders();
@@ -160,11 +167,9 @@ export default function MyOrdersScreen() {
     return (
       <View style={styles.orderCard}>
         <View style={styles.orderHeader}>
-          <View style={[styles.statusBadge, { backgroundColor: status.color + '20' }]}>
-            <Ionicons name={status.icon as any} size={16} color={status.color} />
-            <Text style={[styles.statusText, { color: status.color }]}>
-              {status.label}
-            </Text>
+          <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+            <Ionicons name={status.icon as any} size={14} color={status.color} />
+            <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
           </View>
           <Text style={styles.orderTime}>
             {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
@@ -173,25 +178,28 @@ export default function MyOrdersScreen() {
 
         <View style={styles.orderContent}>
           <View style={styles.orderIconContainer}>
-            <Ionicons name="cafe" size={24} color="#4CAF50" />
+            <Ionicons name="cafe" size={24} color={COLORS.primary} />
           </View>
           <View style={styles.orderInfo}>
             <Text style={styles.itemName}>{item.item_name}</Text>
             <Text style={styles.sellerName}>from {item.seller_name}</Text>
           </View>
-          <Text style={styles.orderPrice}>1 🍵</Text>
+          <View style={styles.orderPriceContainer}>
+            <Text style={styles.orderPrice}>1</Text>
+            <Text style={styles.orderCoin}>\ud83c\udf75</Text>
+          </View>
         </View>
 
         {(canConfirm || canCancel) && (
           <View style={styles.orderActions}>
             {canCancel && (
               <TouchableOpacity
-                style={[styles.actionBtn, styles.cancelBtn]}
+                style={styles.cancelBtn}
                 onPress={() => cancelOrder(item)}
                 disabled={actionLoading === item.order_id}
               >
                 {actionLoading === item.order_id ? (
-                  <ActivityIndicator size="small" color="#f44336" />
+                  <ActivityIndicator size="small" color={COLORS.error} />
                 ) : (
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 )}
@@ -199,14 +207,17 @@ export default function MyOrdersScreen() {
             )}
             {canConfirm && (
               <TouchableOpacity
-                style={[styles.actionBtn, styles.confirmBtn]}
+                style={styles.confirmBtn}
                 onPress={() => confirmDelivery(item)}
                 disabled={actionLoading === item.order_id}
               >
                 {actionLoading === item.order_id ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color={COLORS.white} />
                 ) : (
-                  <Text style={styles.confirmBtnText}>Confirm Received</Text>
+                  <>
+                    <Ionicons name="checkmark" size={18} color={COLORS.white} />
+                    <Text style={styles.confirmBtnText}>Confirm Received</Text>
+                  </>
                 )}
               </TouchableOpacity>
             )}
@@ -219,7 +230,7 @@ export default function MyOrdersScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0084ff" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -227,22 +238,28 @@ export default function MyOrdersScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Orders</Text>
-        <View style={{ width: 24 }} />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerSubtitle}>Track your</Text>
+          <Text style={styles.headerTitle}>Orders</Text>
+        </View>
+        <View style={styles.headerRight} />
       </View>
 
       {orders.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="receipt-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>No orders yet</Text>
+          <View style={styles.emptyIconBg}>
+            <Ionicons name="receipt-outline" size={56} color={COLORS.textLight} />
+          </View>
+          <Text style={styles.emptyTitle}>No Orders Yet</Text>
           <Text style={styles.emptySubtext}>Order some tea to see your orders here</Text>
           <TouchableOpacity
             style={styles.orderTeaBtn}
-            onPress={() => router.push('/order-tea')}
+            onPress={() => router.push('/app/order-tea')}
           >
+            <Ionicons name="cafe" size={20} color={COLORS.white} />
             <Text style={styles.orderTeaBtnText}>Order Tea</Text>
           </TouchableOpacity>
         </View>
@@ -252,8 +269,9 @@ export default function MyOrdersScreen() {
           renderItem={renderOrder}
           keyExtractor={(item) => item.order_id}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
           }
         />
       )}
@@ -264,55 +282,80 @@ export default function MyOrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     paddingTop: 60,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  listContent: {
-    padding: 16,
-  },
-  orderCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 16,
-    padding: 16,
+    backgroundColor: COLORS.white,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: COLORS.textLight,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginTop: 2,
+  },
+  headerRight: {
+    width: 44,
+  },
+  listContent: {
+    padding: 20,
+  },
+  orderCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 3,
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
   },
   statusText: {
     fontSize: 12,
@@ -320,20 +363,20 @@ const styles = StyleSheet.create({
   },
   orderTime: {
     fontSize: 12,
-    color: '#999',
+    color: COLORS.textLight,
   },
   orderContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   orderIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E8F5E9',
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
   orderInfo: {
     flex: 1,
@@ -341,17 +384,25 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: COLORS.text,
   },
   sellerName: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textLight,
     marginTop: 2,
   },
+  orderPriceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   orderPrice: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    color: COLORS.primary,
+  },
+  orderCoin: {
+    fontSize: 18,
   },
   orderActions: {
     flexDirection: 'row',
@@ -359,23 +410,27 @@ const styles = StyleSheet.create({
     marginTop: 16,
     gap: 12,
   },
-  actionBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
   cancelBtn: {
-    backgroundColor: '#ffebee',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#FFEBEE',
   },
   cancelBtnText: {
-    color: '#f44336',
+    color: COLORS.error,
     fontWeight: '600',
   },
   confirmBtn: {
-    backgroundColor: '#4CAF50',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: COLORS.success,
+    gap: 6,
   },
   confirmBtnText: {
-    color: '#fff',
+    color: COLORS.white,
     fontWeight: '600',
   },
   emptyState: {
@@ -384,27 +439,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 16,
+  emptyIconBg: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: COLORS.textLight,
     marginTop: 8,
     textAlign: 'center',
   },
   orderTeaBtn: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 20,
-    marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 25,
+    marginTop: 24,
+    gap: 8,
   },
   orderTeaBtnText: {
-    color: '#fff',
+    color: COLORS.white,
     fontWeight: '600',
+    fontSize: 16,
   },
 });
