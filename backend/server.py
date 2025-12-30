@@ -50,6 +50,13 @@ class User(BaseModel):
     profession: Optional[str] = None
     bio: Optional[str] = None
     skills: List[str] = []
+    location: Optional[str] = None
+    languages: List[str] = []
+    interests: List[str] = []
+    help_offered: Optional[str] = None
+    help_needed: Optional[str] = None
+    experience_years: Optional[int] = None
+    industry: Optional[str] = None
     online: bool = False
     last_seen: Optional[datetime] = None
     created_at: datetime
@@ -59,6 +66,13 @@ class UserProfile(BaseModel):
     bio: Optional[str] = None
     skills: List[str] = []
     picture: Optional[str] = None
+    location: Optional[str] = None
+    languages: List[str] = []
+    interests: List[str] = []
+    help_offered: Optional[str] = None
+    help_needed: Optional[str] = None
+    experience_years: Optional[int] = None
+    industry: Optional[str] = None
 
 class SessionData(BaseModel):
     user_id: str
