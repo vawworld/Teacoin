@@ -281,24 +281,25 @@ export default function SellerDashboardScreen() {
   };
 
   const deleteMenuItem = async (item: MenuItem) => {
-    Alert.alert('Delete Item', `Delete "${item.name}" from your menu?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await fetch(`${BACKEND_URL}/api/menu/${item.item_id}`, {
-              method: 'DELETE',
-              headers: { Authorization: `Bearer ${sessionToken}` },
-            });
-            loadData();
-          } catch (error) {
-            Alert.alert('Error', 'Failed to delete item');
-          }
-        },
-      },
-    ]);
+    // Direct delete without confirmation dialog for better mobile compatibility
+    try {
+      console.log('Deleting menu item:', item.item_id);
+      const response = await fetch(`${BACKEND_URL}/api/menu/${item.item_id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      
+      if (response.ok) {
+        Alert.alert('Deleted', `"${item.name}" has been removed from your menu.`);
+        loadData();
+      } else {
+        const error = await response.json();
+        Alert.alert('Error', error.detail || 'Failed to delete item');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      Alert.alert('Error', 'Failed to delete item');
+    }
   };
 
   const getNextStatus = (currentStatus: string): string | null => {
