@@ -39,21 +39,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [onSocketDisconnect, setOnSocketDisconnect] = useState<(() => void) | undefined>();
 
   useEffect(() => {
-    // Check for session_id in current URL (for web auth callback)
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const sessionId = urlParams.get('session_id') || hashParams.get('session_id');
-      
-      if (sessionId) {
-        exchangeSessionId(sessionId);
-        // Clean up URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        return;
+    // Load saved session token
+    const loadSavedSession = async () => {
+      try {
+        const savedToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+        if (savedToken) {
+          setSessionToken(savedToken);
+          await checkAuth(savedToken);
+          return;
+        }
+      } catch (error) {
+        console.error('Error loading saved session:', error);
       }
-    }
+      
+      // Check for session_id in current URL (for web auth callback)
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const sessionId = urlParams.get('session_id') || hashParams.get('session_id');
+        
+        if (sessionId) {
+          exchangeSessionId(sessionId);
+          // Clean up URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return;
+        }
+      }
+      
+      setLoading(false);
+    };
     
-    checkAuth();
+    loadSavedSession();
     
     // Handle deep links for mobile
     const subscription = Linking.addEventListener('url', handleDeepLink);
