@@ -21,7 +21,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [sessionToken, setSessionToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (sessionToken && user) {
+    if (sessionToken) {
       const newSocket = io(BACKEND_URL!, {
         transports: ['websocket', 'polling'],
         reconnection: true,
@@ -51,8 +51,25 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return () => {
         newSocket.close();
       };
+    } else if (socket) {
+      socket.close();
+      setSocket(null);
+      setConnected(false);
     }
-  }, [sessionToken, user]);
+  }, [sessionToken]);
+
+  const connectSocket = (token: string) => {
+    setSessionToken(token);
+  };
+
+  const disconnectSocket = () => {
+    setSessionToken(null);
+    if (socket) {
+      socket.close();
+      setSocket(null);
+      setConnected(false);
+    }
+  };
 
   const sendMessage = (conversationId: string, content?: string, image?: string) => {
     if (socket && connected) {
@@ -83,7 +100,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   return (
-    <SocketContext.Provider value={{ socket, connected, sendMessage, startTyping, stopTyping }}>
+    <SocketContext.Provider value={{ socket, connected, sendMessage, startTyping, stopTyping, connectSocket, disconnectSocket }}>
       {children}
     </SocketContext.Provider>
   );
