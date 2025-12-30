@@ -774,6 +774,14 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 44,
   },
+  testSoundBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: COLORS.white,
