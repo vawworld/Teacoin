@@ -94,6 +94,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
+        if (token) {
+          setSessionToken(token);
+          // Notify socket to connect
+          if (onSocketConnect) {
+            onSocketConnect(token);
+          }
+        }
       } else {
         setSessionToken(null);
       }
@@ -101,28 +108,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error checking auth:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const login = async () => {
-    try {
-      const redirectUrl = Platform.OS === 'web'
-        ? `${BACKEND_URL}/`
-        : Linking.createURL('/');
-      
-      const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-      
-      if (Platform.OS === 'web') {
-        window.location.href = authUrl;
-      } else {
-        const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
-        
-        if (result.type === 'success' && result.url) {
-          await processAuthUrl(result.url);
-        }
-      }
-    } catch (error) {
-      console.error('Error during login:', error);
     }
   };
 
@@ -138,6 +123,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       setUser(null);
       setSessionToken(null);
+      // Notify socket to disconnect
+      if (onSocketDisconnect) {
+        onSocketDisconnect();
+      }
     } catch (error) {
       console.error('Error during logout:', error);
     }
@@ -148,7 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, sessionToken }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, sessionToken, onSocketConnect: setOnSocketConnect as any, onSocketDisconnect: setOnSocketDisconnect as any }}>
       {children}
     </AuthContext.Provider>
   );
