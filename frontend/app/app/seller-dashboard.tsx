@@ -125,26 +125,24 @@ export default function SellerDashboardScreen() {
       if (response.ok) {
         const newOrders: Order[] = await response.json();
         
-        // Get current order IDs
-        const currentOrderIds = new Set(newOrders.map(o => o.order_id));
-        
         // Find truly new orders (not in our previous set)
-        const newOrderIds = newOrders.filter(
+        const newPendingOrders = newOrders.filter(
           o => !lastOrderIdsRef.current.has(o.order_id) && o.status === 'pending'
         );
         
-        // Only show notification if not first load and there are new orders
-        if (!isFirstLoadRef.current && newOrderIds.length > 0) {
-          console.log('🔔 New orders detected:', newOrderIds.length);
-          setNewOrderCount(newOrderIds.length);
-          showNotificationBanner(newOrderIds.length);
+        console.log('📦 Polling orders - Total:', newOrders.length, 'New pending:', newPendingOrders.length);
+        
+        // Show notification if there are new pending orders
+        if (newPendingOrders.length > 0) {
+          console.log('🔔 NEW ORDERS DETECTED!', newPendingOrders.map(o => o.order_id));
+          setNewOrderCount(newPendingOrders.length);
+          showNotificationBanner(newPendingOrders.length);
           // Vibrate to alert the seller
           Vibration.vibrate([0, 200, 100, 200]);
         }
         
-        // Update last order IDs
-        lastOrderIdsRef.current = currentOrderIds;
-        isFirstLoadRef.current = false;
+        // Update last order IDs with all current orders
+        lastOrderIdsRef.current = new Set(newOrders.map(o => o.order_id));
         setOrders(newOrders);
       }
     } catch (error) {
