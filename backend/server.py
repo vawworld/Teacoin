@@ -70,6 +70,8 @@ class User(BaseModel):
     is_seller: bool = False
     seller_status: Optional[str] = None  # "pending", "approved", "rejected"
     seller_requested_at: Optional[datetime] = None
+    # Admin field
+    is_admin: bool = False
 
 class UserProfile(BaseModel):
     profession: Optional[str] = None
