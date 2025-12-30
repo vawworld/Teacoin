@@ -485,6 +485,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 16,
+    gap: 6,
+  },
+  statusBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.warning,
+  },
   withdrawBtn: {
     marginTop: 24,
     paddingHorizontal: 24,
