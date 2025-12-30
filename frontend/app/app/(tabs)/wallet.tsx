@@ -243,6 +243,29 @@ export default function WalletScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Admin Section */}
+        {wallet?.is_admin && (
+          <TouchableOpacity
+            style={styles.adminCard}
+            onPress={() => router.push('/app/admin-dashboard')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.adminIconBg}>
+              <Ionicons name="shield-checkmark" size={24} color={COLORS.error} />
+            </View>
+            <View style={styles.adminInfo}>
+              <Text style={styles.adminTitle}>Admin Dashboard</Text>
+              <Text style={styles.adminSubtitle}>Manage sellers & users</Text>
+            </View>
+            {wallet?.pending_seller_requests > 0 && (
+              <View style={styles.adminBadge}>
+                <Text style={styles.adminBadgeText}>{wallet.pending_seller_requests}</Text>
+              </View>
+            )}
+            <Ionicons name="chevron-forward" size={20} color={COLORS.textLight} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Transaction History */}
