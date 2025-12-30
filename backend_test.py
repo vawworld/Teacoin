@@ -538,12 +538,16 @@ class TeaCoinsFlowTester:
                 headers=headers
             )
             
-            if response and response.status_code == 401:
+            if response is None:
+                self.log_test(endpoint_info["name"], False,
+                             f"Request failed: {endpoint_info['description']}")
+                all_wallet_endpoints_ok = False
+            elif response.status_code == 401:
                 self.log_test(endpoint_info["name"], True, 
                              f"Wallet endpoint accessible: {endpoint_info['description']}")
             else:
                 self.log_test(endpoint_info["name"], False,
-                             f"Wallet endpoint issue: {endpoint_info['description']}")
+                             f"Unexpected response: Expected 401, got {response.status_code}")
                 all_wallet_endpoints_ok = False
         
         return all_wallet_endpoints_ok
