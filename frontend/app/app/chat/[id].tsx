@@ -85,6 +85,7 @@ export default function ChatScreen() {
     if (!inputText.trim()) return;
     
     if (!sessionToken) {
+      alert('Error: No session token. Please log in again.');
       console.error('No session token available');
       return;
     }
@@ -92,6 +93,8 @@ export default function ChatScreen() {
     setSending(true);
     try {
       console.log('Sending message to:', conversationId);
+      console.log('Token:', sessionToken.substring(0, 20) + '...');
+      
       const response = await fetch(`${BACKEND_URL}/api/messages`, {
         method: 'POST',
         headers: {
@@ -118,9 +121,11 @@ export default function ChatScreen() {
       } else {
         const error = await response.text();
         console.error('Error sending message:', response.status, error);
+        alert(`Failed to send message: ${response.status}`);
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      alert('Network error sending message');
     } finally {
       setSending(false);
     }
