@@ -37,11 +37,18 @@ interface Conversation {
 
 export default function ChatsScreen() {
   const { sessionToken } = useAuth();
-  const { socket } = useSocket();
+  const { socket, connectSocket } = useSocket();
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    // Connect socket when user is authenticated
+    if (sessionToken) {
+      connectSocket(sessionToken);
+    }
+  }, [sessionToken]);
 
   useEffect(() => {
     loadConversations();
