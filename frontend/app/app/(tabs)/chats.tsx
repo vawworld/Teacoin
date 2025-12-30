@@ -102,7 +102,7 @@ export default function ChatsScreen() {
     return (
       <TouchableOpacity
         style={styles.conversationItem}
-        onPress={() => router.push(`/chat/${item.conversation_id}`)}
+        onPress={() => router.push(`/app/chat/${item.conversation_id}`)}
       >
         <View style={styles.avatarContainer}>
           {displayPicture ? (
