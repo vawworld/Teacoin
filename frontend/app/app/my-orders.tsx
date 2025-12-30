@@ -41,6 +41,7 @@ interface Order {
   seller_name: string;
   item_id: string;
   item_name: string;
+  price: number;
   status: string;
   created_at: string;
   updated_at: string;
