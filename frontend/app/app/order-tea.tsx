@@ -78,9 +78,10 @@ export default function OrderTeaScreen() {
   };
 
   const handleOrder = async (item: MenuItem) => {
+    const price = item.price || 1;
     Alert.alert(
-      'Confirm Order \ud83c\udf75',
-      `Order "${item.name}" from ${item.seller_name} for 1 TeaCoin?`,
+      'Confirm Order 🍵',
+      `Order "${item.name}" from ${item.seller_name} for ${price} TeaCoin${price > 1 ? 's' : ''}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -99,8 +100,8 @@ export default function OrderTeaScreen() {
 
               if (response.ok) {
                 Alert.alert(
-                  'Order Placed! \ud83c\udf89',
-                  `Your tea is being prepared by ${item.seller_name}!`,
+                  'Order Placed! 🎉',
+                  `Your order is being prepared by ${item.seller_name}! (${price} TeaCoin${price > 1 ? 's' : ''} deducted)`,
                   [
                     { text: 'View Orders', onPress: () => router.push('/app/my-orders') },
                     { text: 'OK' },
