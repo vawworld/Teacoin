@@ -999,6 +999,9 @@ async def confirm_delivery(
     if order["status"] != "delivered":
         raise HTTPException(status_code=400, detail="Order must be in 'delivered' status to confirm")
     
+    # Get the price from the order (default to 1 for old orders)
+    order_price = order.get("price", 1)
+    
     now = datetime.now(timezone.utc)
     
     # Update order status
@@ -1016,7 +1019,7 @@ async def confirm_delivery(
     # Transfer TeaCoin to seller
     await db.users.update_one(
         {"user_id": order["seller_id"]},
-        {"$inc": {"teacoins": TEA_ORDER_COST}}
+        {"$inc": {"teacoins": order_price}}
     )
     
     # Create transaction records
@@ -1025,14 +1028,14 @@ async def confirm_delivery(
         "transaction_id": transaction_id,
         "from_user_id": current_user.user_id,
         "to_user_id": order["seller_id"],
-        "amount": TEA_ORDER_COST,
+        "amount": order_price,
         "transaction_type": "order_payment",
         "order_id": order_id,
-        "description": f"Payment for {order['item_name']}",
+        "description": f"Payment for {order['item_name']} ({order_price} TeaCoin{'s' if order_price > 1 else ''})",
         "timestamp": now
     })
     
-    return {"message": "Delivery confirmed. TeaCoin transferred to seller."}
+    return {"message": f"Delivery confirmed. {order_price} TeaCoin{'s' if order_price > 1 else ''} transferred to seller."}
 
 @api_router.post("/orders/{order_id}/cancel")
 async def cancel_order(
