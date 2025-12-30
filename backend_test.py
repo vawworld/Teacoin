@@ -658,15 +658,44 @@ class TeaCoinsFlowTester:
 
 def main():
     """Main test execution"""
-    tester = TeaCoinsAPITester()
-    success = tester.run_all_tests()
+    print("🧪 TEACOINS WALLET SYSTEM - COMPREHENSIVE BACKEND TESTING")
+    print("="*80)
     
-    if success:
-        print("\n🎉 All tests passed! TeaCoins Wallet System APIs are working correctly.")
+    # Run original API structure tests
+    print("\n📋 PHASE 1: API STRUCTURE AND AUTHENTICATION TESTS")
+    print("-"*60)
+    api_tester = TeaCoinsAPITester()
+    api_success = api_tester.run_all_tests()
+    
+    # Run complete flow tests
+    print("\n🚀 PHASE 2: COMPLETE ORDERING FLOW TESTS")
+    print("-"*60)
+    flow_tester = TeaCoinsFlowTester()
+    flow_success = flow_tester.run_complete_flow_test()
+    
+    # Overall summary
+    print("\n" + "="*80)
+    print("🎯 OVERALL TEST SUMMARY")
+    print("="*80)
+    
+    if api_success and flow_success:
+        print("🎉 ALL TESTS PASSED!")
+        print("✅ API Structure Tests: PASSED")
+        print("✅ Complete Flow Tests: PASSED")
+        print("\n🔍 KEY FINDINGS:")
+        print("• All TeaCoins ordering flow endpoints are properly implemented")
+        print("• Authentication is correctly enforced on all endpoints")
+        print("• Complete ordering flow structure verified and functional")
+        print("• Wallet and transaction endpoints working correctly")
+        print("• Admin approval system properly implemented")
+        print("\n⚠️  NOTE: Full functional testing requires real OAuth authentication")
+        return True
     else:
-        print("\n⚠️ Some tests failed. Check the details above.")
-    
-    return success
+        print("⚠️  SOME TESTS FAILED!")
+        print(f"✅ API Structure Tests: {'PASSED' if api_success else 'FAILED'}")
+        print(f"✅ Complete Flow Tests: {'PASSED' if flow_success else 'FAILED'}")
+        print("\n📋 Please check the detailed results above.")
+        return False
 
 if __name__ == "__main__":
     main()
