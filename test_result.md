@@ -303,11 +303,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: Order management system working correctly. POST /api/orders creates orders with TeaCoin deduction. GET /api/orders returns buyer's orders. GET /api/orders/seller returns seller's orders. PUT /api/orders/{order_id}/status updates order status. POST /api/orders/{order_id}/confirm confirms delivery and transfers TeaCoins. POST /api/orders/{order_id}/cancel cancels orders with refund. All endpoints properly protected with authentication."
+      - working: "NA"
+        agent: "main"
+        comment: "Added seller order notifications with polling. Need to verify complete ordering flow end-to-end: user applies -> admin approves -> seller adds menu -> buyer orders -> seller updates status -> buyer confirms -> TeaCoin transfer."
 
 frontend:
   - task: "Google OAuth Login Flow"
