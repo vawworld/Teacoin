@@ -479,6 +479,549 @@ async def get_user(
     
     return user
 
+# ==================== WALLET ROUTES ====================
+
+@api_router.get("/wallet")
+async def get_wallet(current_user: User = Depends(require_auth)):
+    """Get current user's wallet info"""
+    user = await db.users.find_one(
+        {"user_id": current_user.user_id},
+        {"_id": 0, "teacoins": 1, "is_seller": 1, "seller_status": 1}
+    )
+    
+    # Get pending orders count (for sellers)
+    pending_orders = 0
+    if user.get("is_seller") and user.get("seller_status") == "approved":
+        pending_orders = await db.orders.count_documents({
+            "seller_id": current_user.user_id,
+            "status": {"$in": ["pending", "preparing", "ready"]}
+        })
+    
+    # Get user's active orders count (as buyer)
+    active_orders = await db.orders.count_documents({
+        "buyer_id": current_user.user_id,
+        "status": {"$in": ["pending", "preparing", "ready", "delivered"]}
+    })
+    
+    return {
+        "teacoins": user.get("teacoins", DEFAULT_TEACOINS),
+        "is_seller": user.get("is_seller", False),
+        "seller_status": user.get("seller_status"),
+        "pending_orders": pending_orders,
+        "active_orders": active_orders
+    }
+
+@api_router.get("/wallet/transactions")
+async def get_transactions(
+    limit: int = 50,
+    current_user: User = Depends(require_auth)
+):
+    """Get user's transaction history"""
+    transactions = await db.transactions.find(
+        {
+            "$or": [
+                {"from_user_id": current_user.user_id},
+                {"to_user_id": current_user.user_id}
+            ]
+        },
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(limit).to_list(limit)
+    
+    # Convert timestamps to ISO strings
+    for txn in transactions:
+        if "timestamp" in txn and txn["timestamp"]:
+            txn["timestamp"] = txn["timestamp"].isoformat()
+    
+    return transactions
+
+# ==================== SELLER ROUTES ====================
+
+@api_router.post("/seller/apply")
+async def apply_seller(
+    request: SellerRequest,
+    current_user: User = Depends(require_auth)
+):
+    """Apply to become a seller or withdraw application"""
+    if request.apply:
+        # Check if already a seller or has pending request
+        user = await db.users.find_one(
+            {"user_id": current_user.user_id},
+            {"_id": 0, "is_seller": 1, "seller_status": 1}
+        )
+        
+        if user.get("is_seller") and user.get("seller_status") == "approved":
+            raise HTTPException(status_code=400, detail="You are already an approved seller")
+        
+        if user.get("seller_status") == "pending":
+            raise HTTPException(status_code=400, detail="You already have a pending seller request")
+        
+        # Submit seller application
+        await db.users.update_one(
+            {"user_id": current_user.user_id},
+            {
+                "$set": {
+                    "seller_status": "pending",
+                    "seller_requested_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        return {"message": "Seller application submitted. Please wait for admin approval."}
+    else:
+        # Withdraw application
+        await db.users.update_one(
+            {"user_id": current_user.user_id},
+            {
+                "$set": {
+                    "seller_status": None,
+                    "seller_requested_at": None
+                }
+            }
+        )
+        return {"message": "Seller application withdrawn."}
+
+@api_router.get("/seller/status")
+async def get_seller_status(current_user: User = Depends(require_auth)):
+    """Get seller application status"""
+    user = await db.users.find_one(
+        {"user_id": current_user.user_id},
+        {"_id": 0, "is_seller": 1, "seller_status": 1, "seller_requested_at": 1}
+    )
+    
+    return {
+        "is_seller": user.get("is_seller", False),
+        "seller_status": user.get("seller_status"),
+        "seller_requested_at": user.get("seller_requested_at").isoformat() if user.get("seller_requested_at") else None
+    }
+
+# ==================== ADMIN ROUTES ====================
+
+@api_router.get("/admin/seller-requests")
+async def get_seller_requests(current_user: User = Depends(require_auth)):
+    """Get pending seller requests (admin only - for MVP any user can access)"""
+    requests = await db.users.find(
+        {"seller_status": "pending"},
+        {"_id": 0, "user_id": 1, "name": 1, "email": 1, "picture": 1, "profession": 1, "seller_requested_at": 1}
+    ).to_list(100)
+    
+    for req in requests:
+        if "seller_requested_at" in req and req["seller_requested_at"]:
+            req["seller_requested_at"] = req["seller_requested_at"].isoformat()
+    
+    return requests
+
+@api_router.post("/admin/seller-approve/{user_id}")
+async def approve_seller(
+    user_id: str,
+    approve: bool = True,
+    current_user: User = Depends(require_auth)
+):
+    """Approve or reject a seller request (admin only - for MVP any user can access)"""
+    user = await db.users.find_one(
+        {"user_id": user_id},
+        {"_id": 0}
+    )
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get("seller_status") != "pending":
+        raise HTTPException(status_code=400, detail="No pending seller request for this user")
+    
+    if approve:
+        await db.users.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    "is_seller": True,
+                    "seller_status": "approved"
+                }
+            }
+        )
+        return {"message": f"Seller request approved for {user['name']}"}
+    else:
+        await db.users.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    "seller_status": "rejected"
+                }
+            }
+        )
+        return {"message": f"Seller request rejected for {user['name']}"}
+
+# ==================== MENU ROUTES ====================
+
+@api_router.post("/menu")
+async def create_menu_item(
+    item: CreateMenuItem,
+    current_user: User = Depends(require_auth)
+):
+    """Create a new menu item (sellers only)"""
+    # Check if user is approved seller
+    user = await db.users.find_one(
+        {"user_id": current_user.user_id},
+        {"_id": 0, "is_seller": 1, "seller_status": 1}
+    )
+    
+    if not user.get("is_seller") or user.get("seller_status") != "approved":
+        raise HTTPException(status_code=403, detail="Only approved sellers can create menu items")
+    
+    item_id = f"item_{uuid.uuid4().hex[:12]}"
+    menu_item = {
+        "item_id": item_id,
+        "seller_id": current_user.user_id,
+        "seller_name": current_user.name,
+        "name": item.name,
+        "description": item.description,
+        "image": item.image,
+        "price": TEA_ORDER_COST,
+        "available": True,
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    await db.menu_items.insert_one(menu_item.copy())
+    
+    menu_item["created_at"] = menu_item["created_at"].isoformat()
+    return menu_item
+
+@api_router.get("/menu")
+async def get_all_menu_items(current_user: User = Depends(require_auth)):
+    """Get all available menu items from all sellers"""
+    items = await db.menu_items.find(
+        {"available": True},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    for item in items:
+        if "created_at" in item and item["created_at"]:
+            item["created_at"] = item["created_at"].isoformat()
+    
+    return items
+
+@api_router.get("/menu/my")
+async def get_my_menu_items(current_user: User = Depends(require_auth)):
+    """Get current user's menu items (sellers only)"""
+    items = await db.menu_items.find(
+        {"seller_id": current_user.user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    for item in items:
+        if "created_at" in item and item["created_at"]:
+            item["created_at"] = item["created_at"].isoformat()
+    
+    return items
+
+@api_router.put("/menu/{item_id}")
+async def update_menu_item(
+    item_id: str,
+    update: UpdateMenuItem,
+    current_user: User = Depends(require_auth)
+):
+    """Update a menu item (owner only)"""
+    item = await db.menu_items.find_one(
+        {"item_id": item_id, "seller_id": current_user.user_id},
+        {"_id": 0}
+    )
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="Menu item not found or you don't have permission")
+    
+    update_data = {}
+    if update.name is not None:
+        update_data["name"] = update.name
+    if update.description is not None:
+        update_data["description"] = update.description
+    if update.image is not None:
+        update_data["image"] = update.image
+    if update.available is not None:
+        update_data["available"] = update.available
+    
+    if update_data:
+        await db.menu_items.update_one(
+            {"item_id": item_id},
+            {"$set": update_data}
+        )
+    
+    return {"message": "Menu item updated"}
+
+@api_router.delete("/menu/{item_id}")
+async def delete_menu_item(
+    item_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Delete a menu item (owner only)"""
+    result = await db.menu_items.delete_one(
+        {"item_id": item_id, "seller_id": current_user.user_id}
+    )
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Menu item not found or you don't have permission")
+    
+    return {"message": "Menu item deleted"}
+
+# ==================== ORDER ROUTES ====================
+
+@api_router.post("/orders")
+async def create_order(
+    order_data: CreateOrder,
+    current_user: User = Depends(require_auth)
+):
+    """Create a new tea order"""
+    # Get the menu item
+    item = await db.menu_items.find_one(
+        {"item_id": order_data.item_id, "available": True},
+        {"_id": 0}
+    )
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="Menu item not found or not available")
+    
+    # Check if buyer has enough TeaCoins
+    buyer = await db.users.find_one(
+        {"user_id": current_user.user_id},
+        {"_id": 0, "teacoins": 1}
+    )
+    
+    if buyer.get("teacoins", 0) < TEA_ORDER_COST:
+        raise HTTPException(status_code=400, detail="Not enough TeaCoins")
+    
+    # Can't order from yourself
+    if item["seller_id"] == current_user.user_id:
+        raise HTTPException(status_code=400, detail="You cannot order from yourself")
+    
+    # Create order
+    order_id = f"order_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    
+    order = {
+        "order_id": order_id,
+        "buyer_id": current_user.user_id,
+        "buyer_name": current_user.name,
+        "seller_id": item["seller_id"],
+        "seller_name": item["seller_name"],
+        "item_id": item["item_id"],
+        "item_name": item["name"],
+        "status": "pending",
+        "created_at": now,
+        "updated_at": now,
+        "delivered_at": None,
+        "confirmed_at": None
+    }
+    
+    await db.orders.insert_one(order.copy())
+    
+    # Deduct TeaCoins from buyer (held in escrow until confirmed)
+    await db.users.update_one(
+        {"user_id": current_user.user_id},
+        {"$inc": {"teacoins": -TEA_ORDER_COST}}
+    )
+    
+    order["created_at"] = order["created_at"].isoformat()
+    order["updated_at"] = order["updated_at"].isoformat()
+    
+    return order
+
+@api_router.get("/orders")
+async def get_my_orders(current_user: User = Depends(require_auth)):
+    """Get current user's orders (as buyer)"""
+    orders = await db.orders.find(
+        {"buyer_id": current_user.user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    for order in orders:
+        for field in ["created_at", "updated_at", "delivered_at", "confirmed_at"]:
+            if field in order and order[field]:
+                order[field] = order[field].isoformat()
+    
+    return orders
+
+@api_router.get("/orders/seller")
+async def get_seller_orders(current_user: User = Depends(require_auth)):
+    """Get orders for seller to fulfill"""
+    # Check if user is approved seller
+    user = await db.users.find_one(
+        {"user_id": current_user.user_id},
+        {"_id": 0, "is_seller": 1, "seller_status": 1}
+    )
+    
+    if not user.get("is_seller") or user.get("seller_status") != "approved":
+        raise HTTPException(status_code=403, detail="Only approved sellers can view seller orders")
+    
+    orders = await db.orders.find(
+        {"seller_id": current_user.user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    for order in orders:
+        for field in ["created_at", "updated_at", "delivered_at", "confirmed_at"]:
+            if field in order and order[field]:
+                order[field] = order[field].isoformat()
+    
+    return orders
+
+@api_router.put("/orders/{order_id}/status")
+async def update_order_status(
+    order_id: str,
+    update: UpdateOrderStatus,
+    current_user: User = Depends(require_auth)
+):
+    """Update order status (seller updates: preparing, ready, delivered)"""
+    order = await db.orders.find_one(
+        {"order_id": order_id},
+        {"_id": 0}
+    )
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Only seller can update to preparing/ready/delivered
+    if update.status in ["preparing", "ready", "delivered"]:
+        if order["seller_id"] != current_user.user_id:
+            raise HTTPException(status_code=403, detail="Only the seller can update this status")
+    
+    valid_transitions = {
+        "pending": ["preparing", "cancelled"],
+        "preparing": ["ready", "cancelled"],
+        "ready": ["delivered"],
+        "delivered": ["confirmed"],
+        "confirmed": [],
+        "cancelled": []
+    }
+    
+    if update.status not in valid_transitions.get(order["status"], []):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot change status from {order['status']} to {update.status}"
+        )
+    
+    update_data = {
+        "status": update.status,
+        "updated_at": datetime.now(timezone.utc)
+    }
+    
+    if update.status == "delivered":
+        update_data["delivered_at"] = datetime.now(timezone.utc)
+    
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": f"Order status updated to {update.status}"}
+
+@api_router.post("/orders/{order_id}/confirm")
+async def confirm_delivery(
+    order_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Confirm delivery and transfer TeaCoin to seller (buyer only)"""
+    order = await db.orders.find_one(
+        {"order_id": order_id},
+        {"_id": 0}
+    )
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order["buyer_id"] != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Only the buyer can confirm delivery")
+    
+    if order["status"] != "delivered":
+        raise HTTPException(status_code=400, detail="Order must be in 'delivered' status to confirm")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Update order status
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {
+            "$set": {
+                "status": "confirmed",
+                "confirmed_at": now,
+                "updated_at": now
+            }
+        }
+    )
+    
+    # Transfer TeaCoin to seller
+    await db.users.update_one(
+        {"user_id": order["seller_id"]},
+        {"$inc": {"teacoins": TEA_ORDER_COST}}
+    )
+    
+    # Create transaction records
+    transaction_id = f"txn_{uuid.uuid4().hex[:12]}"
+    await db.transactions.insert_one({
+        "transaction_id": transaction_id,
+        "from_user_id": current_user.user_id,
+        "to_user_id": order["seller_id"],
+        "amount": TEA_ORDER_COST,
+        "transaction_type": "order_payment",
+        "order_id": order_id,
+        "description": f"Payment for {order['item_name']}",
+        "timestamp": now
+    })
+    
+    return {"message": "Delivery confirmed. TeaCoin transferred to seller."}
+
+@api_router.post("/orders/{order_id}/cancel")
+async def cancel_order(
+    order_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Cancel an order and refund TeaCoin (buyer or seller, before delivered)"""
+    order = await db.orders.find_one(
+        {"order_id": order_id},
+        {"_id": 0}
+    )
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Only buyer or seller can cancel
+    if order["buyer_id"] != current_user.user_id and order["seller_id"] != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Only buyer or seller can cancel the order")
+    
+    if order["status"] in ["delivered", "confirmed", "cancelled"]:
+        raise HTTPException(status_code=400, detail=f"Cannot cancel order in '{order['status']}' status")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Update order status
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {
+            "$set": {
+                "status": "cancelled",
+                "updated_at": now
+            }
+        }
+    )
+    
+    # Refund TeaCoin to buyer
+    await db.users.update_one(
+        {"user_id": order["buyer_id"]},
+        {"$inc": {"teacoins": TEA_ORDER_COST}}
+    )
+    
+    # Create refund transaction
+    transaction_id = f"txn_{uuid.uuid4().hex[:12]}"
+    await db.transactions.insert_one({
+        "transaction_id": transaction_id,
+        "from_user_id": None,  # System refund
+        "to_user_id": order["buyer_id"],
+        "amount": TEA_ORDER_COST,
+        "transaction_type": "refund",
+        "order_id": order_id,
+        "description": f"Refund for cancelled order: {order['item_name']}",
+        "timestamp": now
+    })
+    
+    return {"message": "Order cancelled. TeaCoin refunded."}
+
 # ==================== CONVERSATION ROUTES ====================
 
 @api_router.post("/conversations")
