@@ -248,8 +248,66 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: Image message support working correctly. Both Socket.io and HTTP messaging (POST /api/messages) support base64 image transmission. Messages stored with image field in MongoDB."
-        agent: "main"
-        comment: "Messages support both content (text) and image (base64) fields. Stored in MongoDB messages collection."
+
+  - task: "TeaCoins Wallet System"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Complete TeaCoins wallet system working correctly. GET /api/wallet returns user balance and seller status. GET /api/wallet/transactions returns transaction history. All endpoints properly protected with authentication."
+
+  - task: "Seller Management System"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Seller management system working correctly. POST /api/seller/apply allows users to apply to become sellers. GET /api/seller/status returns application status. All endpoints properly protected with authentication."
+
+  - task: "Admin Seller Approval System"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Admin seller approval system working correctly. GET /api/admin/seller-requests returns pending seller applications. POST /api/admin/seller-approve/{user_id}?approve=true allows approving/rejecting seller requests. All endpoints properly protected with authentication."
+
+  - task: "Menu Management System"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Menu management system working correctly. POST /api/menu creates menu items (sellers only). GET /api/menu returns all available items. GET /api/menu/my returns seller's own items. PUT /api/menu/{item_id} and DELETE /api/menu/{item_id} for item management. All endpoints properly protected with authentication."
+
+  - task: "Order Management System"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Order management system working correctly. POST /api/orders creates orders with TeaCoin deduction. GET /api/orders returns buyer's orders. GET /api/orders/seller returns seller's orders. PUT /api/orders/{order_id}/status updates order status. POST /api/orders/{order_id}/confirm confirms delivery and transfers TeaCoins. POST /api/orders/{order_id}/cancel cancels orders with refund. All endpoints properly protected with authentication."
 
 frontend:
   - task: "Google OAuth Login Flow"
