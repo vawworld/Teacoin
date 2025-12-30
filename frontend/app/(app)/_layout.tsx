@@ -7,6 +7,10 @@ export default function AppLayout() {
       <Stack.Screen name="chat/[id]" />
       <Stack.Screen name="user/[id]" />
       <Stack.Screen name="create-group" />
+      <Stack.Screen name="order-tea" />
+      <Stack.Screen name="my-orders" />
+      <Stack.Screen name="become-seller" />
+      <Stack.Screen name="seller-dashboard" />
     </Stack>
   );
 }
