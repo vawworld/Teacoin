@@ -307,8 +307,10 @@ async def auth_callback(session_id: str, response: Response):
             {"_id": 0}
         )
         
+        is_new_user = existing_user is None
+        
         if not existing_user:
-            # Create new user
+            # Create new user with 100 TeaCoins
             await db.users.insert_one({
                 "user_id": user_id,
                 "email": user_data["email"],
@@ -319,7 +321,24 @@ async def auth_callback(session_id: str, response: Response):
                 "skills": [],
                 "online": False,
                 "last_seen": None,
-                "created_at": datetime.now(timezone.utc)
+                "created_at": datetime.now(timezone.utc),
+                # TeaCoins wallet
+                "teacoins": DEFAULT_TEACOINS,
+                "is_seller": False,
+                "seller_status": None,
+                "seller_requested_at": None
+            })
+            
+            # Create signup bonus transaction
+            await db.transactions.insert_one({
+                "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
+                "from_user_id": None,  # System bonus
+                "to_user_id": user_id,
+                "amount": DEFAULT_TEACOINS,
+                "transaction_type": "signup_bonus",
+                "order_id": None,
+                "description": "Welcome bonus - 100 TeaCoins!",
+                "timestamp": datetime.now(timezone.utc)
             })
         else:
             user_id = existing_user["user_id"]
@@ -344,7 +363,7 @@ async def auth_callback(session_id: str, response: Response):
             path="/"
         )
         
-        return {"session_token": session_token, "user_id": user_id}
+        return {"session_token": session_token, "user_id": user_id, "is_new_user": is_new_user}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
