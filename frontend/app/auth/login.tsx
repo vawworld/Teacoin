@@ -1,10 +1,31 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { user, loading, login } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user) {
+      // User is logged in, check if profile is complete
+      if (!user.profession) {
+        router.replace('/auth/profile-setup');
+      } else {
+        router.replace('/app/(tabs)/chats');
+      }
+    }
+  }, [user, loading]);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#0084ff" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
