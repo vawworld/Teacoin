@@ -86,10 +86,16 @@ export default function BecomeSellerScreen() {
       });
       console.log('Response status:', response.status);
       if (response.ok) {
+        // Immediately update the local status to show pending state
+        setStatus({
+          is_seller: false,
+          seller_status: 'pending',
+          seller_requested_at: new Date().toISOString(),
+        });
         Alert.alert(
           'Application Submitted! 🎉',
           'Your seller application is under review. You\'ll be notified once approved.',
-          [{ text: 'OK', onPress: loadSellerStatus }]
+          [{ text: 'OK' }]
         );
       } else {
         const error = await response.json();
