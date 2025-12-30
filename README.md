@@ -108,8 +108,8 @@ Users create detailed profiles with their skills, profession, location, and what
 ## 🌐 Deployment
 
 ### URLs
-- **App**: https://professio.preview.emergentagent.com
-- **Backend API**: https://professio.preview.emergentagent.com/api
+- **App**: https://teacoin-wallet.preview.emergentagent.com
+- **Backend API**: https://teacoin-wallet.preview.emergentagent.com/api
 
 ### Environment Variables
 
@@ -122,8 +122,8 @@ DB_NAME=test_database
 **Frontend (.env)**
 ```
 EXPO_TUNNEL_SUBDOMAIN=prolink-messenger
-EXPO_PACKAGER_HOSTNAME=https://professio.preview.emergentagent.com
-EXPO_PUBLIC_BACKEND_URL=https://professio.preview.emergentagent.com
+EXPO_PACKAGER_HOSTNAME=https://teacoin-wallet.preview.emergentagent.com
+EXPO_PUBLIC_BACKEND_URL=https://teacoin-wallet.preview.emergentagent.com
 ```
 
 ## 🚀 Running the App
@@ -295,15 +295,15 @@ tail -f /var/log/supervisor/expo.out.log
 ### Backend Testing
 ```bash
 # Test auth
-curl https://professio.preview.emergentagent.com/api/auth/me \
+curl https://teacoin-wallet.preview.emergentagent.com/api/auth/me \
   -H "Authorization: Bearer {token}"
 
 # Test search
-curl https://professio.preview.emergentagent.com/api/users/search?q=developer \
+curl https://teacoin-wallet.preview.emergentagent.com/api/users/search?q=developer \
   -H "Authorization: Bearer {token}"
 
 # Test send message
-curl -X POST https://professio.preview.emergentagent.com/api/messages \
+curl -X POST https://teacoin-wallet.preview.emergentagent.com/api/messages \
   -H "Authorization: Bearer {token}" \
   -H "Content-Type: application/json" \
   -d '{"conversation_id":"conv_123","content":"Hello"}'
