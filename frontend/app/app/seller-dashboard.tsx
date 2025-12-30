@@ -129,7 +129,6 @@ export default function SellerDashboardScreen() {
     }
     
     try {
-      console.log('🔄 Checking for new orders...');
       const response = await fetch(`${BACKEND_URL}/api/orders/seller`, {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
@@ -137,25 +136,31 @@ export default function SellerDashboardScreen() {
       if (response.ok) {
         const newOrders: Order[] = await response.json();
         
-        // Find truly new orders (not in our previous set)
-        const newPendingOrders = newOrders.filter(
-          o => !lastOrderIdsRef.current.has(o.order_id) && o.status === 'pending'
+        // Get all pending orders
+        const pendingOrders = newOrders.filter(o => o.status === 'pending');
+        
+        // Find truly new pending orders (not in our previous set)
+        const newPendingOrders = pendingOrders.filter(
+          o => !lastOrderIdsRef.current.has(o.order_id)
         );
         
-        console.log('📦 Orders check - Known IDs:', lastOrderIdsRef.current.size, 
-                    'Total now:', newOrders.length, 
-                    'New pending:', newPendingOrders.length);
+        console.log('🔄 Poll result - Total orders:', newOrders.length, 
+                    '| Pending:', pendingOrders.length,
+                    '| Known IDs:', lastOrderIdsRef.current.size,
+                    '| NEW:', newPendingOrders.length);
         
         // Show notification if there are new pending orders
         if (newPendingOrders.length > 0) {
-          console.log('🔔 NEW ORDERS!', newPendingOrders.map(o => o.item_name));
+          console.log('🔔🔔🔔 NEW ORDERS DETECTED! 🔔🔔🔔');
+          console.log('New orders:', newPendingOrders.map(o => `${o.order_id}: ${o.item_name}`));
+          
           setNewOrderCount(newPendingOrders.length);
           showNotificationBanner(newPendingOrders.length);
           // Vibrate to alert the seller
           Vibration.vibrate([0, 300, 100, 300]);
         }
         
-        // Update last order IDs with all current orders
+        // Update last order IDs with ALL current orders (not just pending)
         lastOrderIdsRef.current = new Set(newOrders.map(o => o.order_id));
         setOrders(newOrders);
       } else {
