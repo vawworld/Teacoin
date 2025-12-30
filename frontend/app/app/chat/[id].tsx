@@ -84,8 +84,14 @@ export default function ChatScreen() {
   const handleSend = async () => {
     if (!inputText.trim()) return;
     
+    if (!sessionToken) {
+      console.error('No session token available');
+      return;
+    }
+    
     setSending(true);
     try {
+      console.log('Sending message to:', conversationId);
       const response = await fetch(`${BACKEND_URL}/api/messages`, {
         method: 'POST',
         headers: {
@@ -98,6 +104,8 @@ export default function ChatScreen() {
         }),
       });
 
+      console.log('Message response status:', response.status);
+      
       if (response.ok) {
         const newMessage = await response.json();
         setMessages((prev) => [...prev, newMessage]);
@@ -107,6 +115,9 @@ export default function ChatScreen() {
         setTimeout(() => {
           flatListRef.current?.scrollToEnd();
         }, 100);
+      } else {
+        const error = await response.text();
+        console.error('Error sending message:', response.status, error);
       }
     } catch (error) {
       console.error('Error sending message:', error);
