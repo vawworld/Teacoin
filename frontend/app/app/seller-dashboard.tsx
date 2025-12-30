@@ -176,7 +176,13 @@ export default function SellerDashboardScreen() {
           headers: { Authorization: `Bearer ${sessionToken}` },
         }),
       ]);
-      if (ordersRes.ok) setOrders(await ordersRes.json());
+      if (ordersRes.ok) {
+        const ordersData = await ordersRes.json();
+        setOrders(ordersData);
+        // Set initial pending order count (don't show notification on first load)
+        const pendingCount = ordersData.filter((o: Order) => o.status === 'pending').length;
+        setLastOrderCount(pendingCount);
+      }
       if (menuRes.ok) setMenuItems(await menuRes.json());
     } catch (error) {
       console.error('Error loading data:', error);
