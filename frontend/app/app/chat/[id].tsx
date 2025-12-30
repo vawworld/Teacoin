@@ -269,7 +269,10 @@ export default function ChatScreen() {
           style={styles.input}
           placeholder="Type a message..."
           value={inputText}
-          onChangeText={setInputText}
+          onChangeText={(text) => {
+            console.log('Input changed:', text);
+            setInputText(text);
+          }}
           multiline
           maxLength={1000}
           editable={!sending}
@@ -277,7 +280,10 @@ export default function ChatScreen() {
 
         <TouchableOpacity
           style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
-          onPress={handleSend}
+          onPress={() => {
+            console.log('Send button pressed! Text:', inputText);
+            handleSend();
+          }}
           disabled={!inputText.trim() || sending}
         >
           {sending ? (
