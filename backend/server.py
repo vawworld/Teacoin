@@ -21,15 +21,14 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Socket.IO setup
+# Socket.IO setup - using /socket.io path (standard)
 sio = socketio.AsyncServer(
     async_mode='asgi',
     cors_allowed_origins='*',
     logger=True,
     engineio_logger=True,
     ping_timeout=60,
-    ping_interval=25,
-    path='/api/socket.io/'
+    ping_interval=25
 )
 
 # Create the main app
@@ -38,8 +37,8 @@ fastapi_app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
-# Socket.IO app
-socket_app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)
+# Socket.IO app wrapping FastAPI - socket.io will be at /socket.io
+socket_app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app, socketio_path='socket.io')
 
 # ==================== MODELS ====================
 
