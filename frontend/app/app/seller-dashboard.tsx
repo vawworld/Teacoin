@@ -150,7 +150,7 @@ export default function SellerDashboardScreen() {
         if (newPendingOrders.length > 0) {
           console.log('🔔 NEW ORDERS!', newPendingOrders.map(o => o.item_name));
           setNewOrderCount(newPendingOrders.length);
-          await showNotificationBanner(newPendingOrders.length);
+          showNotificationBanner(newPendingOrders.length);
           // Vibrate to alert the seller
           Vibration.vibrate([0, 300, 100, 300]);
         }
