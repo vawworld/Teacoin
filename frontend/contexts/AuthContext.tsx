@@ -7,6 +7,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const SESSION_TOKEN_KEY = 'teafriends_session_token';
 
+// Global token storage as fallback
+let globalSessionToken: string | null = null;
+
 interface User {
   user_id: string;
   email: string;
