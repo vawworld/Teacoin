@@ -51,6 +51,7 @@ export default function OrderTeaScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [ordering, setOrdering] = useState<string | null>(null);
+  const [orderedItems, setOrderedItems] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadMenuItems();
@@ -74,13 +75,18 @@ export default function OrderTeaScreen() {
 
   const onRefresh = () => {
     setRefreshing(true);
+    setOrderedItems(new Set()); // Reset ordered items on refresh
     loadMenuItems();
   };
 
   const handleOrder = async (item: MenuItem) => {
+    // Prevent duplicate orders while processing
+    if (ordering || orderedItems.has(item.item_id)) {
+      return;
+    }
+    
     const price = item.price || 1;
     
-    // Direct order without confirmation dialog for better mobile compatibility
     setOrdering(item.item_id);
     try {
       console.log('Placing order for item:', item.item_id);
@@ -96,23 +102,26 @@ export default function OrderTeaScreen() {
       console.log('Order response status:', response.status);
 
       if (response.ok) {
+        // Mark item as ordered to prevent duplicate clicks
+        setOrderedItems(prev => new Set([...prev, item.item_id]));
+        
+        // Show success message
         Alert.alert(
-          'Order Placed! 🎉',
-          `Your order is being prepared by ${item.seller_name}! (${price} TeaCoin${price > 1 ? 's' : ''} deducted)`,
+          '✅ Order Placed!',
+          `${item.name} ordered from ${item.seller_name}!\n\n${price} TeaCoin${price > 1 ? 's' : ''} deducted from your wallet.`,
           [
-            { text: 'View Orders', onPress: () => router.push('/app/my-orders') },
+            { text: 'View My Orders', onPress: () => router.push('/app/my-orders') },
             { text: 'OK' },
           ]
         );
-        loadMenuItems();
       } else {
         const error = await response.json();
         console.log('Order error:', error);
-        Alert.alert('Order Failed', error.detail || 'Failed to place order');
+        Alert.alert('❌ Order Failed', error.detail || 'Failed to place order');
       }
     } catch (error) {
       console.error('Order error:', error);
-      Alert.alert('Error', 'Failed to place order. Please try again.');
+      Alert.alert('❌ Error', 'Failed to place order. Please try again.');
     } finally {
       setOrdering(null);
     }
