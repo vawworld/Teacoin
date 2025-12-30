@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
