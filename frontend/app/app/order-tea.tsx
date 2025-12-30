@@ -159,16 +159,22 @@ export default function OrderTeaScreen() {
         <TouchableOpacity
           style={[
             styles.orderButton,
-            ordering === item.item_id && styles.orderButtonDisabled,
+            (ordering === item.item_id || orderedItems.has(item.item_id)) && styles.orderButtonDisabled,
+            orderedItems.has(item.item_id) && styles.orderButtonOrdered,
           ]}
           onPress={() => handleOrder(item)}
-          disabled={ordering === item.item_id}
+          disabled={ordering === item.item_id || orderedItems.has(item.item_id)}
           activeOpacity={0.8}
         >
           {ordering === item.item_id ? (
             <>
               <ActivityIndicator size="small" color={COLORS.white} />
               <Text style={styles.orderButtonText}>Processing...</Text>
+            </>
+          ) : orderedItems.has(item.item_id) ? (
+            <>
+              <Ionicons name="checkmark-circle" size={18} color={COLORS.white} />
+              <Text style={styles.orderButtonText}>Ordered ✓</Text>
             </>
           ) : (
             <>
