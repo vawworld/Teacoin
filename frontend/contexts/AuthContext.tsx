@@ -131,7 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? window.location.origin
         : Linking.createURL('/');
       
-      const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+      const authUrl = `https://auth.emergentagent.com/?app_name=TEAFRIENDS&redirect=${encodeURIComponent(redirectUrl)}`;
       
       if (Platform.OS === 'web') {
         window.location.href = authUrl;
