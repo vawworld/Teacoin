@@ -61,11 +61,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Then try to load saved session token
       try {
         const savedToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
-        console.log('Loaded saved token:', savedToken ? 'present' : 'missing');
-        if (savedToken) {
+        console.log('Loaded saved token:', savedToken ? savedToken.substring(0, 10) + '...' : 'missing');
+        
+        // Check if token is valid (not null, not "null" string, not empty)
+        if (savedToken && savedToken !== 'null' && savedToken !== 'undefined' && savedToken.length > 10) {
+          globalSessionToken = savedToken;
           setSessionToken(savedToken);
           await checkAuth(savedToken);
           return;
+        } else if (savedToken) {
+          // Clear invalid token
+          console.log('Clearing invalid saved token');
+          await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
         }
       } catch (error) {
         console.error('Error loading saved session:', error);
