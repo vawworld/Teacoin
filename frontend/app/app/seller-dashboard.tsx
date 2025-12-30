@@ -473,7 +473,15 @@ export default function SellerDashboardScreen() {
           <Text style={styles.headerSubtitle}>Manage your</Text>
           <Text style={styles.headerTitle}>Tea Shop</Text>
         </View>
-        <View style={styles.headerRight} />
+        <TouchableOpacity 
+          style={styles.testSoundBtn} 
+          onPress={() => {
+            console.log('🔊 Test sound button pressed');
+            showNotificationBanner(1);
+          }}
+        >
+          <Ionicons name="volume-high" size={20} color={COLORS.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Tabs */}
