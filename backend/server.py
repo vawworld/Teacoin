@@ -398,8 +398,15 @@ async def get_conversations(current_user: User = Depends(require_auth)):
         {"_id": 0}
     ).sort("created_at", -1).to_list(100)
     
-    # Enrich with participant info
+    # Enrich with participant info and convert dates
     for conv in conversations:
+        # Convert datetime to ISO string
+        if "created_at" in conv and conv["created_at"]:
+            conv["created_at"] = conv["created_at"].isoformat()
+        
+        if "last_message" in conv and conv["last_message"] and "timestamp" in conv["last_message"]:
+            conv["last_message"]["timestamp"] = conv["last_message"]["timestamp"].isoformat()
+        
         if conv["type"] == "direct":
             other_user_id = [uid for uid in conv["participants"] if uid != current_user.user_id][0]
             other_user = await db.users.find_one(
