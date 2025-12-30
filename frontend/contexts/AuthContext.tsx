@@ -102,6 +102,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.ok) {
         const data = await response.json();
         setSessionToken(data.session_token);
+        // Save token to storage
+        await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.session_token);
         await checkAuth(data.session_token);
       }
     } catch (error) {
