@@ -39,8 +39,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [onSocketDisconnect, setOnSocketDisconnect] = useState<(() => void) | undefined>();
 
   useEffect(() => {
-    // Load saved session token
-    const loadSavedSession = async () => {
+    const initAuth = async () => {
+      // First check for session_id in current URL (for web auth callback)
+      // This takes priority over saved token
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const sessionId = urlParams.get('session_id') || hashParams.get('session_id');
+        
+        if (sessionId) {
+          // Clean up URL first
+          window.history.replaceState({}, document.title, window.location.pathname);
+          await exchangeSessionId(sessionId);
+          return;
+        }
+      }
+      
+      // Then try to load saved session token
       try {
         const savedToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
         if (savedToken) {
@@ -52,24 +67,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error loading saved session:', error);
       }
       
-      // Check for session_id in current URL (for web auth callback)
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const urlParams = new URLSearchParams(window.location.search);
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const sessionId = urlParams.get('session_id') || hashParams.get('session_id');
-        
-        if (sessionId) {
-          exchangeSessionId(sessionId);
-          // Clean up URL
-          window.history.replaceState({}, document.title, window.location.pathname);
-          return;
-        }
-      }
-      
       setLoading(false);
     };
     
-    loadSavedSession();
+    initAuth();
     
     // Handle deep links for mobile
     const subscription = Linking.addEventListener('url', handleDeepLink);
