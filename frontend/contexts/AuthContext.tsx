@@ -111,6 +111,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const login = async () => {
+    try {
+      const redirectUrl = Linking.createURL('/');
+      const authUrl = `${BACKEND_URL}/api/auth/google?redirect_uri=${encodeURIComponent(redirectUrl)}`;
+      
+      if (Platform.OS === 'web') {
+        window.location.href = authUrl;
+      } else {
+        const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+        if (result.type === 'success' && result.url) {
+          await processAuthUrl(result.url);
+        }
+      }
+    } catch (error) {
+      console.error('Error during login:', error);
+    }
+  };
+
   const logout = async () => {
     try {
       if (sessionToken) {
