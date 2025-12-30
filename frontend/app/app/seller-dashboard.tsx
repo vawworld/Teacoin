@@ -173,6 +173,10 @@ export default function SellerDashboardScreen() {
   };
 
   const playNotificationSound = () => {
+    // Immediate haptic feedback first (instant)
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    
+    // Then play sound (may have slight delay)
     console.log('🔊 Playing notification sound...');
     soundManager.playOrderNotification()
       .then(() => console.log('🔊 Sound played'))
@@ -180,6 +184,9 @@ export default function SellerDashboardScreen() {
   };
 
   const showNotificationBanner = (count: number) => {
+    // Immediate haptic feedback
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    
     setShowNewOrderBanner(true);
     
     // Play notification sound
