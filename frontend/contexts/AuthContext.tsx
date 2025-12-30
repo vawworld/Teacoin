@@ -178,6 +178,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       setUser(null);
       setSessionToken(null);
+      // Clear saved token
+      await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
       // Notify socket to disconnect
       if (onSocketDisconnect) {
         onSocketDisconnect();
