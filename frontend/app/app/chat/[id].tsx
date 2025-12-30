@@ -47,6 +47,7 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastMessageCountRef = useRef<number>(0);
 
   useEffect(() => {
     loadMessages();
@@ -78,6 +79,21 @@ export default function ChatScreen() {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Check if there are new messages from others
+        if (silent && data.length > lastMessageCountRef.current) {
+          const newMessages = data.slice(lastMessageCountRef.current);
+          const hasNewFromOthers = newMessages.some(
+            (msg: Message) => msg.sender_id !== user?.user_id
+          );
+          
+          if (hasNewFromOthers) {
+            // Play message received sound
+            soundManager.playMessageReceived();
+          }
+        }
+        
+        lastMessageCountRef.current = data.length;
         setMessages(data);
       }
     } catch (error) {
