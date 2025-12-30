@@ -77,6 +77,7 @@ export default function SellerDashboardScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemDesc, setNewItemDesc] = useState('');
+  const [newItemPrice, setNewItemPrice] = useState('1');
   const [addingItem, setAddingItem] = useState(false);
 
   // Notification state
