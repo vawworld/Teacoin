@@ -120,6 +120,9 @@ export default function ChatScreen() {
         setMessages((prev) => [...prev, newMessage]);
         setInputText('');
         
+        // Play message sent sound
+        soundManager.playMessageSent();
+        
         // Scroll to bottom
         setTimeout(() => {
           flatListRef.current?.scrollToEnd();
