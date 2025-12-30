@@ -549,9 +549,9 @@ async def typing(sid, data):
 # ==================== MOUNT SOCKET.IO ====================
 
 # Include the router in the main app
-app.include_router(api_router)
+fastapi_app.include_router(api_router)
 
-app.add_middleware(
+fastapi_app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=["*"],
@@ -566,7 +566,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@app.on_event("shutdown")
+@fastapi_app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
 
