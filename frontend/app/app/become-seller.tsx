@@ -44,10 +44,16 @@ export default function BecomeSellerScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    loadSellerStatus();
-  }, []);
+    if (sessionToken) {
+      loadSellerStatus();
+    }
+  }, [sessionToken]);
 
   const loadSellerStatus = async () => {
+    if (!sessionToken) {
+      setLoading(false);
+      return;
+    }
     try {
       const response = await fetch(`${BACKEND_URL}/api/seller/status`, {
         headers: { Authorization: `Bearer ${sessionToken}` },
@@ -63,8 +69,13 @@ export default function BecomeSellerScreen() {
   };
 
   const applyAsSeller = async () => {
+    if (!sessionToken) {
+      Alert.alert('Error', 'Please login first');
+      return;
+    }
     setSubmitting(true);
     try {
+      console.log('Applying as seller with token:', sessionToken ? 'present' : 'missing');
       const response = await fetch(`${BACKEND_URL}/api/seller/apply`, {
         method: 'POST',
         headers: {
@@ -73,17 +84,20 @@ export default function BecomeSellerScreen() {
         },
         body: JSON.stringify({ apply: true }),
       });
+      console.log('Response status:', response.status);
       if (response.ok) {
         Alert.alert(
-          'Application Submitted! \ud83c\udf89',
+          'Application Submitted! 🎉',
           'Your seller application is under review. You\'ll be notified once approved.',
           [{ text: 'OK', onPress: loadSellerStatus }]
         );
       } else {
         const error = await response.json();
+        console.log('Error response:', error);
         Alert.alert('Error', error.detail || 'Failed to submit application');
       }
     } catch (error) {
+      console.error('Apply error:', error);
       Alert.alert('Error', 'Failed to submit application');
     } finally {
       setSubmitting(false);
