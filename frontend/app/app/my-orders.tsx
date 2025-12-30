@@ -122,37 +122,31 @@ export default function MyOrdersScreen() {
   };
 
   const cancelOrder = async (order: Order) => {
-    Alert.alert(
-      'Cancel Order',
-      `Cancel order for "${order.item_name}"?\nYour TeaCoin will be refunded.`,
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: async () => {
-            setActionLoading(order.order_id);
-            try {
-              const response = await fetch(
-                `${BACKEND_URL}/api/orders/${order.order_id}/cancel`,
-                { method: 'POST', headers: { Authorization: `Bearer ${sessionToken}` } }
-              );
-              if (response.ok) {
-                Alert.alert('Cancelled', 'Order cancelled. TeaCoin refunded.');
-                loadOrders();
-              } else {
-                const error = await response.json();
-                Alert.alert('Error', error.detail || 'Failed to cancel order');
-              }
-            } catch (error) {
-              Alert.alert('Error', 'Failed to cancel order');
-            } finally {
-              setActionLoading(null);
-            }
-          },
-        },
-      ]
-    );
+    // Direct cancel without dialog for better mobile compatibility
+    const price = order.price || 1;
+    setActionLoading(order.order_id);
+    try {
+      console.log('Cancelling order:', order.order_id);
+      const response = await fetch(
+        `${BACKEND_URL}/api/orders/${order.order_id}/cancel`,
+        { method: 'POST', headers: { Authorization: `Bearer ${sessionToken}` } }
+      );
+      console.log('Cancel response status:', response.status);
+      
+      if (response.ok) {
+        Alert.alert('Cancelled', `Order cancelled.\n${price} TeaCoin${price > 1 ? 's' : ''} refunded to your wallet.`);
+        loadOrders();
+      } else {
+        const error = await response.json();
+        console.log('Cancel error:', error);
+        Alert.alert('Error', error.detail || 'Failed to cancel order');
+      }
+    } catch (error) {
+      console.error('Cancel error:', error);
+      Alert.alert('Error', 'Failed to cancel order');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const renderOrder = ({ item }: { item: Order }) => {
