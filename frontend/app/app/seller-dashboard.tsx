@@ -383,6 +383,38 @@ export default function SellerDashboardScreen() {
 
   return (
     <View style={styles.container}>
+      {/* New Order Notification Banner */}
+      {showNewOrderBanner && (
+        <Animated.View 
+          style={[
+            styles.notificationBanner,
+            { transform: [{ translateY: bannerAnim }] }
+          ]}
+        >
+          <TouchableOpacity 
+            style={styles.notificationContent}
+            onPress={() => {
+              hideNotificationBanner();
+              setActiveTab('orders');
+            }}
+            activeOpacity={0.9}
+          >
+            <View style={styles.notificationIconBg}>
+              <Ionicons name="notifications" size={20} color={COLORS.white} />
+            </View>
+            <View style={styles.notificationTextContainer}>
+              <Text style={styles.notificationTitle}>🍵 New Order{newOrderCount > 1 ? 's' : ''}!</Text>
+              <Text style={styles.notificationSubtitle}>
+                You have {newOrderCount} new order{newOrderCount > 1 ? 's' : ''} to prepare
+              </Text>
+            </View>
+            <TouchableOpacity onPress={hideNotificationBanner} style={styles.notificationClose}>
+              <Ionicons name="close" size={20} color={COLORS.white} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
