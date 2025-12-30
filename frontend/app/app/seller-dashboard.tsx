@@ -540,16 +540,68 @@ export default function SellerDashboardScreen() {
             <Text style={styles.inputLabel}>Tea Name *</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g., Green Tea, Chai Latte"
+              placeholder="e.g., Masala Chai, Samosa, Coffee"
               placeholderTextColor={COLORS.textLight}
               value={newItemName}
               onChangeText={setNewItemName}
             />
             
-            <Text style={styles.inputLabel}>Description</Text>
+            <Text style={styles.inputLabel}>Price (TeaCoins)</Text>
+            <View style={styles.priceInputContainer}>
+              <TouchableOpacity 
+                style={styles.priceBtn}
+                onPress={() => {
+                  const current = parseInt(newItemPrice) || 1;
+                  if (current > 1) setNewItemPrice(String(current - 1));
+                }}
+              >
+                <Ionicons name="remove" size={20} color={COLORS.primary} />
+              </TouchableOpacity>
+              <View style={styles.priceDisplay}>
+                <Ionicons name="logo-bitcoin" size={18} color={COLORS.primary} />
+                <TextInput
+                  style={styles.priceInput}
+                  value={newItemPrice}
+                  onChangeText={(text) => {
+                    const num = text.replace(/[^0-9]/g, '');
+                    setNewItemPrice(num || '1');
+                  }}
+                  keyboardType="numeric"
+                  maxLength={3}
+                />
+              </View>
+              <TouchableOpacity 
+                style={styles.priceBtn}
+                onPress={() => {
+                  const current = parseInt(newItemPrice) || 1;
+                  if (current < 100) setNewItemPrice(String(current + 1));
+                }}
+              >
+                <Ionicons name="add" size={20} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.quickPrices}>
+              {[5, 10, 15, 20, 25].map((price) => (
+                <TouchableOpacity
+                  key={price}
+                  style={[
+                    styles.quickPriceBtn,
+                    newItemPrice === String(price) && styles.quickPriceBtnActive
+                  ]}
+                  onPress={() => setNewItemPrice(String(price))}
+                >
+                  <Text style={[
+                    styles.quickPriceText,
+                    newItemPrice === String(price) && styles.quickPriceTextActive
+                  ]}>{price}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <Text style={styles.inputLabel}>Description (Optional)</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Tell customers about this tea..."
+              placeholder="Tell customers about this item..."
               placeholderTextColor={COLORS.textLight}
               value={newItemDesc}
               onChangeText={setNewItemDesc}
