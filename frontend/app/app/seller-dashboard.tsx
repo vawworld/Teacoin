@@ -917,11 +917,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
-    marginTop: 6,
   },
   availText: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  menuPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 8,
+  },
+  priceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 3,
+  },
+  priceText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   menuActions: {
     flexDirection: 'row',
