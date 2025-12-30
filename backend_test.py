@@ -399,6 +399,9 @@ class TeaCoinsFlowTester:
         except requests.exceptions.RequestException as e:
             self.log(f"Request failed: {str(e)}", "ERROR")
             return None
+        except Exception as e:
+            self.log(f"Unexpected error: {str(e)}", "ERROR")
+            return None
     
     def setup_real_authentication(self):
         """
