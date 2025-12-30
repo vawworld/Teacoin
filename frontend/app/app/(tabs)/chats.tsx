@@ -14,6 +14,7 @@ import { useSocket } from '../../../contexts/SocketContext';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
+import CustomTabBar from '../../../components/CustomTabBar';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
