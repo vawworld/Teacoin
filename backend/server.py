@@ -154,7 +154,7 @@ async def send_message_http(
     try:
         # Create message
         message_id = f"msg_{uuid.uuid4().hex[:12]}"
-        message = {
+        message_doc = {
             "message_id": message_id,
             "conversation_id": message_data.conversation_id,
             "sender_id": current_user.user_id,
@@ -166,8 +166,8 @@ async def send_message_http(
             "read_by": [current_user.user_id]
         }
         
-        # Save message
-        await db.messages.insert_one(message)
+        # Save message to database
+        await db.messages.insert_one(message_doc.copy())
         
         # Update conversation
         await db.conversations.update_one(
@@ -183,9 +183,20 @@ async def send_message_http(
             }
         )
         
-        # Return the message with timestamp as string
-        message["timestamp"] = message["timestamp"].isoformat()
-        return message
+        # Return the message without _id and with ISO timestamp
+        message_response = {
+            "message_id": message_id,
+            "conversation_id": message_data.conversation_id,
+            "sender_id": current_user.user_id,
+            "sender_name": current_user.name,
+            "sender_picture": current_user.picture,
+            "content": message_data.content,
+            "image": message_data.image,
+            "timestamp": message_doc["timestamp"].isoformat(),
+            "read_by": [current_user.user_id]
+        }
+        
+        return message_response
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
