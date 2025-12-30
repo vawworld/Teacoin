@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useSocket } from '../../../contexts/SocketContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { formatDistanceToNow } from 'date-fns';
@@ -34,43 +33,34 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams();
   const conversationId = id as string;
   const { user, sessionToken } = useAuth();
-  const { socket, sendMessage, startTyping, stopTyping } = useSocket();
   const router = useRouter();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
-  const [typing, setTyping] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadMessages();
-
-    if (socket) {
-      socket.on('new_message', (message: Message) => {
-        if (message.conversation_id === conversationId) {
-          setMessages((prev) => [...prev, message]);
-        }
-      });
-
-      socket.on('user_typing', (data: any) => {
-        if (data.conversation_id === conversationId && data.user_id !== user?.user_id) {
-          setTyping(data.is_typing ? data.user_name : null);
-        }
-      });
-    }
+    
+    // Start polling for new messages every 2 seconds
+    pollingIntervalRef.current = setInterval(() => {
+      loadMessages(true);
+    }, 2000);
 
     return () => {
-      if (socket) {
-        socket.off('new_message');
-        socket.off('user_typing');
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
       }
     };
-  }, [socket, conversationId]);
+  }, [conversationId]);
 
-  const loadMessages = async () => {
+  const loadMessages = async (silent = false) => {
     try {
+      if (!silent) setLoading(true);
+      
       const response = await fetch(
         `${BACKEND_URL}/api/conversations/${conversationId}/messages`,
         {
@@ -87,33 +77,41 @@ export default function ChatScreen() {
     } catch (error) {
       console.error('Error loading messages:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
-  const handleSend = () => {
-    if (inputText.trim()) {
-      sendMessage(conversationId, inputText.trim());
-      setInputText('');
-      stopTyping(conversationId);
-    }
-  };
+  const handleSend = async () => {
+    if (!inputText.trim()) return;
+    
+    setSending(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          content: inputText.trim(),
+        }),
+      });
 
-  const handleTyping = (text: string) => {
-    setInputText(text);
-
-    if (text.length > 0) {
-      startTyping(conversationId);
-
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
+      if (response.ok) {
+        const newMessage = await response.json();
+        setMessages((prev) => [...prev, newMessage]);
+        setInputText('');
+        
+        // Scroll to bottom
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd();
+        }, 100);
       }
-
-      typingTimeoutRef.current = setTimeout(() => {
-        stopTyping(conversationId);
-      }, 2000);
-    } else {
-      stopTyping(conversationId);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setSending(false);
     }
   };
 
@@ -132,8 +130,35 @@ export default function ChatScreen() {
     });
 
     if (!result.canceled && result.assets[0].base64) {
-      const imageBase64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
-      sendMessage(conversationId, undefined, imageBase64);
+      setSending(true);
+      try {
+        const imageBase64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        
+        const response = await fetch(`${BACKEND_URL}/api/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${sessionToken}`,
+          },
+          body: JSON.stringify({
+            conversation_id: conversationId,
+            image: imageBase64,
+          }),
+        });
+
+        if (response.ok) {
+          const newMessage = await response.json();
+          setMessages((prev) => [...prev, newMessage]);
+          
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd();
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error sending image:', error);
+      } finally {
+        setSending(false);
+      }
     }
   };
 
@@ -219,32 +244,31 @@ export default function ChatScreen() {
         onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
       />
 
-      {typing && (
-        <View style={styles.typingIndicator}>
-          <Text style={styles.typingText}>{typing} is typing...</Text>
-        </View>
-      )}
-
       <View style={styles.inputContainer}>
-        <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-          <Ionicons name="image" size={24} color="#0084ff" />
+        <TouchableOpacity style={styles.imageButton} onPress={pickImage} disabled={sending}>
+          <Ionicons name="image" size={24} color={sending ? "#ccc" : "#0084ff"} />
         </TouchableOpacity>
 
         <TextInput
           style={styles.input}
           placeholder="Type a message..."
           value={inputText}
-          onChangeText={handleTyping}
+          onChangeText={setInputText}
           multiline
           maxLength={1000}
+          editable={!sending}
         />
 
         <TouchableOpacity
-          style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+          style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
           onPress={handleSend}
-          disabled={!inputText.trim()}
+          disabled={!inputText.trim() || sending}
         >
-          <Ionicons name="send" size={20} color="white" />
+          {sending ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Ionicons name="send" size={20} color="white" />
+          )}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
