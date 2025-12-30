@@ -315,6 +315,20 @@ async def update_profile(
         update_data["skills"] = [s.lower() for s in profile.skills]
     if profile.picture is not None:
         update_data["picture"] = profile.picture
+    if profile.location is not None:
+        update_data["location"] = profile.location
+    if profile.languages:
+        update_data["languages"] = [lang.lower() for lang in profile.languages]
+    if profile.interests:
+        update_data["interests"] = [i.lower() for i in profile.interests]
+    if profile.help_offered is not None:
+        update_data["help_offered"] = profile.help_offered
+    if profile.help_needed is not None:
+        update_data["help_needed"] = profile.help_needed
+    if profile.experience_years is not None:
+        update_data["experience_years"] = profile.experience_years
+    if profile.industry is not None:
+        update_data["industry"] = profile.industry.lower()
     
     await db.users.update_one(
         {"user_id": current_user.user_id},
