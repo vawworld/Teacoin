@@ -121,6 +121,63 @@ class SendMessage(BaseModel):
     content: Optional[str] = None
     image: Optional[str] = None
 
+# ==================== TEACOINS MODELS ====================
+
+class MenuItem(BaseModel):
+    item_id: str
+    seller_id: str
+    seller_name: str
+    name: str
+    description: Optional[str] = None
+    image: Optional[str] = None
+    price: int = TEA_ORDER_COST  # Always 1 TeaCoin
+    available: bool = True
+    created_at: datetime
+
+class CreateMenuItem(BaseModel):
+    name: str
+    description: Optional[str] = None
+    image: Optional[str] = None
+
+class UpdateMenuItem(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    image: Optional[str] = None
+    available: Optional[bool] = None
+
+class Order(BaseModel):
+    order_id: str
+    buyer_id: str
+    buyer_name: str
+    seller_id: str
+    seller_name: str
+    item_id: str
+    item_name: str
+    status: str  # "pending", "preparing", "ready", "delivered", "confirmed", "cancelled"
+    created_at: datetime
+    updated_at: datetime
+    delivered_at: Optional[datetime] = None
+    confirmed_at: Optional[datetime] = None
+
+class CreateOrder(BaseModel):
+    item_id: str
+
+class UpdateOrderStatus(BaseModel):
+    status: str  # "preparing", "ready", "delivered"
+
+class Transaction(BaseModel):
+    transaction_id: str
+    from_user_id: Optional[str]  # None for signup bonus
+    to_user_id: str
+    amount: int
+    transaction_type: str  # "signup_bonus", "order_payment", "order_received"
+    order_id: Optional[str] = None
+    description: str
+    timestamp: datetime
+
+class SellerRequest(BaseModel):
+    apply: bool = True  # True to apply, False to withdraw
+
 # ==================== AUTH HELPERS ====================
 
 async def get_current_user(
