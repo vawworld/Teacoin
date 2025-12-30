@@ -140,6 +140,7 @@ class CreateMenuItem(BaseModel):
     name: str
     description: Optional[str] = None
     image: Optional[str] = None
+    price: int = 1  # Default price is 1 TeaCoin
 
 class UpdateMenuItem(BaseModel):
     name: Optional[str] = None
