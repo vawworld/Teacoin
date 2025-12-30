@@ -58,6 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Then try to load saved session token
       try {
         const savedToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+        console.log('Loaded saved token:', savedToken ? 'present' : 'missing');
         if (savedToken) {
           setSessionToken(savedToken);
           await checkAuth(savedToken);
