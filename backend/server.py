@@ -488,7 +488,7 @@ async def get_wallet(current_user: User = Depends(require_auth)):
     """Get current user's wallet info"""
     user = await db.users.find_one(
         {"user_id": current_user.user_id},
-        {"_id": 0, "teacoins": 1, "is_seller": 1, "seller_status": 1}
+        {"_id": 0, "teacoins": 1, "is_seller": 1, "seller_status": 1, "is_admin": 1}
     )
     
     # Get pending orders count (for sellers)
@@ -505,12 +505,21 @@ async def get_wallet(current_user: User = Depends(require_auth)):
         "status": {"$in": ["pending", "preparing", "ready", "delivered"]}
     })
     
+    # Get pending seller requests count (for admin)
+    pending_seller_requests = 0
+    if user.get("is_admin"):
+        pending_seller_requests = await db.users.count_documents({
+            "seller_status": "pending"
+        })
+    
     return {
         "teacoins": user.get("teacoins", DEFAULT_TEACOINS),
         "is_seller": user.get("is_seller", False),
         "seller_status": user.get("seller_status"),
+        "is_admin": user.get("is_admin", False),
         "pending_orders": pending_orders,
-        "active_orders": active_orders
+        "active_orders": active_orders,
+        "pending_seller_requests": pending_seller_requests
     }
 
 @api_router.get("/wallet/transactions")
