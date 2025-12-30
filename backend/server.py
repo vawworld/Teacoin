@@ -38,6 +38,9 @@ api_router = APIRouter(prefix="/api")
 # Socket.IO app
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
+# Export socket_app as the main app for uvicorn
+app = socket_app
+
 # ==================== MODELS ====================
 
 class User(BaseModel):
