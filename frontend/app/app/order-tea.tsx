@@ -157,7 +157,10 @@ export default function OrderTeaScreen() {
           activeOpacity={0.8}
         >
           {ordering === item.item_id ? (
-            <ActivityIndicator size="small" color={COLORS.white} />
+            <>
+              <ActivityIndicator size="small" color={COLORS.white} />
+              <Text style={styles.orderButtonText}>Processing...</Text>
+            </>
           ) : (
             <>
               <Ionicons name="cart" size={18} color={COLORS.white} />
