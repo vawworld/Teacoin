@@ -1,20 +1,19 @@
 import { Audio } from 'expo-av';
 import { Platform } from 'react-native';
 
-// Sound URLs - using free sounds from web
+// Sound URLs - using reliable free sounds
 const SOUND_URLS = {
-  // Order notification - bell/chime sound
-  orderNotification: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
+  // Order notification - bell/chime sound (shorter, more reliable)
+  orderNotification: 'https://cdn.pixabay.com/audio/2022/03/24/audio_d1718ab41b.mp3',
   // Chat message sent - whoosh/send sound  
-  messageSent: 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3',
+  messageSent: 'https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73467.mp3',
   // Chat message received - pop/notification sound
-  messageReceived: 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3',
+  messageReceived: 'https://cdn.pixabay.com/audio/2021/08/04/audio_0625c1539c.mp3',
   // Success sound
-  success: 'https://assets.mixkit.co/active_storage/sfx/2190/2190-preview.mp3',
+  success: 'https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b73c6.mp3',
 };
 
 class SoundManager {
-  private sounds: { [key: string]: Audio.Sound | null } = {};
   private isInitialized = false;
 
   async initialize() {
@@ -28,8 +27,9 @@ class SoundManager {
         shouldDuckAndroid: true,
       });
       this.isInitialized = true;
+      console.log('🔊 Audio initialized successfully');
     } catch (error) {
-      console.log('Error initializing audio:', error);
+      console.log('🔊 Error initializing audio:', error);
     }
   }
 
@@ -38,26 +38,35 @@ class SoundManager {
       await this.initialize();
       
       const url = SOUND_URLS[soundName];
-      if (!url) return;
+      if (!url) {
+        console.log('🔊 Sound not found:', soundName);
+        return;
+      }
 
+      console.log('🔊 Loading sound:', soundName);
+      
       // Create and play new sound
       const { sound } = await Audio.Sound.createAsync(
         { uri: url },
-        { shouldPlay: true, volume: 0.8 }
+        { shouldPlay: true, volume: 1.0 }
       );
+
+      console.log('🔊 Sound playing:', soundName);
 
       // Clean up after playing
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
+          console.log('🔊 Sound finished, unloading');
           sound.unloadAsync();
         }
       });
     } catch (error) {
-      console.log('Error playing sound:', error);
+      console.log('🔊 Error playing sound:', error);
     }
   }
 
   async playOrderNotification() {
+    console.log('🔔 Playing order notification...');
     await this.playSound('orderNotification');
   }
 
