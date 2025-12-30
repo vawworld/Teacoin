@@ -113,8 +113,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async () => {
     try {
-      const redirectUrl = Linking.createURL('/');
-      const authUrl = `${BACKEND_URL}/api/auth/google?redirect_uri=${encodeURIComponent(redirectUrl)}`;
+      const redirectUrl = Platform.OS === 'web'
+        ? window.location.origin
+        : Linking.createURL('/');
+      
+      const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
       
       if (Platform.OS === 'web') {
         window.location.href = authUrl;
