@@ -143,6 +143,53 @@ def require_auth(user: Optional[User] = Depends(get_current_user)) -> User:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
 
+# ==================== MESSAGE ROUTES ====================
+
+@api_router.post("/messages")
+async def send_message_http(
+    message_data: SendMessage,
+    current_user: User = Depends(require_auth)
+):
+    """Send a message via HTTP (polling alternative to Socket.io)"""
+    try:
+        # Create message
+        message_id = f"msg_{uuid.uuid4().hex[:12]}"
+        message = {
+            "message_id": message_id,
+            "conversation_id": message_data.conversation_id,
+            "sender_id": current_user.user_id,
+            "sender_name": current_user.name,
+            "sender_picture": current_user.picture,
+            "content": message_data.content,
+            "image": message_data.image,
+            "timestamp": datetime.now(timezone.utc),
+            "read_by": [current_user.user_id]
+        }
+        
+        # Save message
+        await db.messages.insert_one(message)
+        
+        # Update conversation
+        await db.conversations.update_one(
+            {"conversation_id": message_data.conversation_id},
+            {
+                "$set": {
+                    "last_message": {
+                        "content": message_data.content,
+                        "sender_name": current_user.name,
+                        "timestamp": datetime.now(timezone.utc)
+                    }
+                }
+            }
+        )
+        
+        # Return the message with timestamp as string
+        message["timestamp"] = message["timestamp"].isoformat()
+        return message
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ==================== AUTH ROUTES ====================
 
 @api_router.get("/auth/callback")
