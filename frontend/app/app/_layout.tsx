@@ -11,6 +11,7 @@ export default function AppLayout() {
       <Stack.Screen name="my-orders" />
       <Stack.Screen name="become-seller" />
       <Stack.Screen name="seller-dashboard" />
+      <Stack.Screen name="admin-dashboard" />
     </Stack>
   );
 }
