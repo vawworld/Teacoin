@@ -23,6 +23,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
   sessionToken: string | null;
+  onSocketConnect?: (token: string) => void;
+  onSocketDisconnect?: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +33,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [onSocketConnect, setOnSocketConnect] = useState<((token: string) => void) | undefined>();
+  const [onSocketDisconnect, setOnSocketDisconnect] = useState<(() => void) | undefined>();
 
   useEffect(() => {
     checkAuth();
