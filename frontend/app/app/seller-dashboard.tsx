@@ -113,14 +113,16 @@ export default function SellerDashboardScreen() {
       clearInterval(pollingInterval.current);
     }
     
-    console.log('🔄 Starting order polling (every 5 seconds)...');
+    console.log('🔄 Starting order polling (every 3 seconds)...');
     
-    // Poll every 5 seconds for faster response
+    // Poll every 3 seconds for faster response
     pollingInterval.current = setInterval(() => {
       if (isInitializedRef.current) {
         checkForNewOrders();
+      } else {
+        console.log('⏳ Waiting for initialization...');
       }
-    }, 5000);
+    }, 3000);
   };
 
   const checkForNewOrders = async () => {
