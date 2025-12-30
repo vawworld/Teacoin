@@ -175,8 +175,8 @@ export default function MyOrdersScreen() {
             <Text style={styles.sellerName}>from {item.seller_name}</Text>
           </View>
           <View style={styles.orderPriceContainer}>
-            <Text style={styles.orderPrice}>1</Text>
-            <Text style={styles.orderCoin}>\ud83c\udf75</Text>
+            <Ionicons name="logo-bitcoin" size={16} color={COLORS.primary} />
+            <Text style={styles.orderPrice}>{item.price || 1}</Text>
           </View>
         </View>
 
