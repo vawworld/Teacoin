@@ -371,6 +371,9 @@ const styles = StyleSheet.create({
   orderButtonDisabled: {
     backgroundColor: COLORS.textLight,
   },
+  orderButtonOrdered: {
+    backgroundColor: COLORS.success,
+  },
   orderButtonText: {
     color: COLORS.white,
     fontSize: 16,
