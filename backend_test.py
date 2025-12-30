@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
 ProLink Messenger Backend Testing Suite
-Tests all backend APIs and Socket.io functionality
+Tests all backend APIs with focus on HTTP polling messaging
 """
 
 import asyncio
 import aiohttp
-import socketio
 import json
 import base64
 from datetime import datetime
@@ -15,7 +14,6 @@ import uuid
 # Configuration
 BASE_URL = "https://prolink-messenger.preview.emergentagent.com"
 API_URL = f"{BASE_URL}/api"
-SOCKET_URL = BASE_URL
 
 class ProLinkTester:
     def __init__(self):
