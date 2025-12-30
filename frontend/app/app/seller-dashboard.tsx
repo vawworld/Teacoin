@@ -202,9 +202,10 @@ export default function SellerDashboardScreen() {
       if (ordersRes.ok) {
         const ordersData = await ordersRes.json();
         setOrders(ordersData);
-        // Set initial pending order count (don't show notification on first load)
-        const pendingCount = ordersData.filter((o: Order) => o.status === 'pending').length;
-        setLastOrderCount(pendingCount);
+        // Initialize order IDs for tracking (don't show notification on first load)
+        lastOrderIdsRef.current = new Set(ordersData.map((o: Order) => o.order_id));
+        isFirstLoadRef.current = false;
+        console.log('📦 Initial orders loaded:', ordersData.length, 'Order IDs:', [...lastOrderIdsRef.current]);
       }
       if (menuRes.ok) setMenuItems(await menuRes.json());
     } catch (error) {
