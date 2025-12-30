@@ -7,7 +7,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 import uuid
 from datetime import datetime, timezone, timedelta
 import socketio
@@ -20,6 +20,10 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+# Default TeaCoins for new users
+DEFAULT_TEACOINS = 100
+TEA_ORDER_COST = 1  # Cost per tea order in TeaCoins
 
 # Socket.IO setup - using /socket.io path (standard)
 sio = socketio.AsyncServer(
