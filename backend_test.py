@@ -2,15 +2,18 @@
 """
 TeaCoins Wallet System Backend API Testing
 Tests all TeaCoins wallet, seller, menu, and order APIs
+INCLUDING COMPLETE END-TO-END ORDERING FLOW
 """
 
 import requests
 import json
 import time
+import sys
 from datetime import datetime
 
 # Backend URL from frontend/.env
 BACKEND_URL = "https://teacoin-wallet.preview.emergentagent.com/api"
+ADMIN_EMAIL = "11.kumarsambhav@gmail.com"
 
 class TeaCoinsAPITester:
     def __init__(self):
