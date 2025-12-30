@@ -365,10 +365,16 @@ export default function SellerDashboardScreen() {
       <View style={styles.menuInfo}>
         <Text style={styles.menuName}>{item.name}</Text>
         {item.description && <Text style={styles.menuDesc} numberOfLines={1}>{item.description}</Text>}
-        <View style={[styles.availBadge, { backgroundColor: item.available ? '#E8F5E9' : '#FFEBEE' }]}>
-          <Text style={[styles.availText, { color: item.available ? COLORS.success : COLORS.error }]}>
-            {item.available ? 'Available' : 'Hidden'}
-          </Text>
+        <View style={styles.menuPriceRow}>
+          <View style={[styles.availBadge, { backgroundColor: item.available ? '#E8F5E9' : '#FFEBEE' }]}>
+            <Text style={[styles.availText, { color: item.available ? COLORS.success : COLORS.error }]}>
+              {item.available ? 'Available' : 'Hidden'}
+            </Text>
+          </View>
+          <View style={styles.priceBadge}>
+            <Ionicons name="logo-bitcoin" size={12} color={COLORS.primary} />
+            <Text style={styles.priceText}>{item.price || 1}</Text>
+          </View>
         </View>
       </View>
       <View style={styles.menuActions}>
