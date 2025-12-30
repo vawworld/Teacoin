@@ -13,6 +13,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
+import CustomTabBar from '../../../components/CustomTabBar';
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 interface User {
@@ -98,7 +99,8 @@ export default function SearchScreen() {
         ) : (
           <View style={[styles.avatar, styles.avatarPlaceholder]}>
             <Ionicons name="person" size={24} color="#999" />
-          </View>
+            <CustomTabBar />
+    </View>
         )}
         {item.online && <View style={styles.onlineIndicator} />}
 
@@ -112,8 +114,10 @@ export default function SearchScreen() {
               {item.bio}
             </Text>
           )}
-        </View>
-      </View>
+          <CustomTabBar />
+    </View>
+        <CustomTabBar />
+    </View>
 
       <TouchableOpacity
         style={styles.chatButton}
@@ -128,7 +132,8 @@ export default function SearchScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Search Professionals</Text>
-      </View>
+        <CustomTabBar />
+    </View>
 
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
@@ -139,18 +144,21 @@ export default function SearchScreen() {
           onChangeText={handleSearch}
           autoCapitalize="none"
         />
-      </View>
+        <CustomTabBar />
+    </View>
 
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#0084ff" />
-        </View>
+          <CustomTabBar />
+    </View>
       ) : searched && results.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="search-outline" size={64} color="#ccc" />
           <Text style={styles.emptyText}>No users found</Text>
           <Text style={styles.emptySubtext}>Try a different search term</Text>
-        </View>
+          <CustomTabBar />
+    </View>
       ) : !searched ? (
         <View style={styles.emptyState}>
           <Ionicons name="people-outline" size={64} color="#ccc" />
@@ -158,7 +166,8 @@ export default function SearchScreen() {
           <Text style={styles.emptySubtext}>
             Type a profession like "singer" or "developer"
           </Text>
-        </View>
+          <CustomTabBar />
+    </View>
       ) : (
         <FlatList
           data={results}
@@ -167,6 +176,7 @@ export default function SearchScreen() {
           contentContainerStyle={styles.listContent}
         />
       )}
+      <CustomTabBar />
     </View>
   );
 }

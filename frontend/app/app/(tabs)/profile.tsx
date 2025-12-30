@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import CustomTabBar from '../../../components/CustomTabBar';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -85,6 +86,7 @@ export default function ProfileScreen() {
       <View style={styles.footer}>
         <Text style={styles.footerText}>ProLink Messenger v1.0</Text>
       </View>
+      <CustomTabBar />
     </ScrollView>
   );
 }
