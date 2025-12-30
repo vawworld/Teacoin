@@ -187,7 +187,14 @@ async def get_current_user(
     session_token: Optional[str] = Cookie(None)
 ) -> Optional[User]:
     """Get current user from session token (cookie or header)"""
-    token = session_token or (authorization.replace("Bearer ", "") if authorization else None)
+    # Extract token from header or cookie
+    header_token = None
+    if authorization and authorization.startswith("Bearer "):
+        header_token = authorization[7:]  # Remove "Bearer " prefix
+    
+    token = session_token or header_token
+    
+    logging.info(f"Auth check - Cookie token: {bool(session_token)}, Header token: {bool(header_token)}, Final token: {token[:20] if token else 'None'}...")
     
     if not token:
         return None
