@@ -231,14 +231,18 @@ export default function WalletScreen() {
               onPress={() => router.push('/app/become-seller')}
               activeOpacity={0.7}
             >
-              <View style={[styles.actionIconBg, { backgroundColor: '#F3E5F5' }]}>
-                <Ionicons name="add-circle" size={28} color="#9C27B0" />
+              <View style={[styles.actionIconBg, { backgroundColor: wallet?.seller_status === 'pending' ? '#FFF3E0' : '#F3E5F5' }]}>
+                <Ionicons 
+                  name={wallet?.seller_status === 'pending' ? 'hourglass' : 'add-circle'} 
+                  size={28} 
+                  color={wallet?.seller_status === 'pending' ? COLORS.warning : '#9C27B0'} 
+                />
               </View>
               <Text style={styles.actionTitle}>
                 {wallet?.seller_status === 'pending' ? 'Pending' : 'Sell Tea'}
               </Text>
               <Text style={styles.actionSubtitle}>
-                {wallet?.seller_status === 'pending' ? 'Under review' : 'Start earning'}
+                {wallet?.seller_status === 'pending' ? 'Awaiting approval' : 'Start earning'}
               </Text>
             </TouchableOpacity>
           )}
