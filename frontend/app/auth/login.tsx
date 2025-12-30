@@ -37,12 +37,28 @@ export default function LoginScreen() {
         <Text style={styles.title}>TEAFRIENDS</Text>
         <Text style={styles.subtitle}>Connect with tea lovers worldwide</Text>
         
+        <View style={styles.featuresContainer}>
+          <View style={styles.feature}>
+            <Text style={styles.featureIcon}>🍵</Text>
+            <Text style={styles.featureText}>Find tea enthusiasts</Text>
+          </View>
+          <View style={styles.feature}>
+            <Text style={styles.featureIcon}>💬</Text>
+            <Text style={styles.featureText}>Chat in real-time</Text>
+          </View>
+          <View style={styles.feature}>
+            <Text style={styles.featureIcon}>🌍</Text>
+            <Text style={styles.featureText}>Connect globally</Text>
+          </View>
+        </View>
+        
         <TouchableOpacity style={styles.button} onPress={login}>
           <Ionicons name="logo-google" size={20} color="white" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>Continue with Google</Text>
         </TouchableOpacity>
         
-        <Text style={styles.footer}>Find tea enthusiasts and start chatting</Text>
+        <Text style={styles.footer}>Secure authentication via Google</Text>
+        <Text style={styles.note}>You'll be redirected to Google for secure login</Text>
       </View>
     </View>
   );
