@@ -2371,6 +2371,18 @@ fastapi_app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add validation error handler to log details
+from fastapi.exceptions import RequestValidationError
+from starlette.requests import Request
+
+@fastapi_app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logging.error(f"Validation error on {request.url}: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": str(exc.body)[:500] if exc.body else None}
+    )
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
