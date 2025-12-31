@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -29,7 +31,23 @@ const COLORS = {
   textLight: '#8B7355',
   border: '#E8DDD4',
   success: '#4CAF50',
+  mention: '#1E88E5',
+  mentionBg: '#E3F2FD',
+  replyBg: '#F5F5F5',
 };
+
+interface User {
+  user_id: string;
+  name: string;
+  picture?: string;
+  profession?: string;
+}
+
+interface ReplyTo {
+  message_id: string;
+  sender_name: string;
+  content: string;
+}
 
 interface Message {
   message_id: string;
@@ -37,6 +55,8 @@ interface Message {
   sender_name: string;
   sender_picture?: string;
   content: string;
+  mentions?: string[];
+  reply_to?: ReplyTo;
   timestamp: string;
 }
 
@@ -47,11 +67,19 @@ export default function GlobalChatScreen() {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState('');
+  const [selectedMentions, setSelectedMentions] = useState<string[]>([]);
+  const [replyTo, setReplyTo] = useState<ReplyTo | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     loadMessages();
+    loadUsers();
     
     // Poll for new messages every 3 seconds
     pollingIntervalRef.current = setInterval(() => {
@@ -84,6 +112,62 @@ export default function GlobalChatScreen() {
     }
   };
 
+  const loadUsers = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/chat/global/users`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAllUsers(data);
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  };
+
+  const handleTextChange = (text: string) => {
+    setInputText(text);
+    
+    // Check for @ mentions
+    const lastAtIndex = text.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const afterAt = text.substring(lastAtIndex + 1);
+      const hasSpaceAfter = afterAt.includes(' ');
+      
+      if (!hasSpaceAfter && afterAt.length >= 0) {
+        setMentionSearch(afterAt.toLowerCase());
+        setShowMentions(true);
+      } else {
+        setShowMentions(false);
+      }
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  const selectMention = (selectedUser: User) => {
+    const lastAtIndex = inputText.lastIndexOf('@');
+    const beforeAt = inputText.substring(0, lastAtIndex);
+    const newText = `${beforeAt}@${selectedUser.name} `;
+    setInputText(newText);
+    setShowMentions(false);
+    
+    // Track mentioned user
+    if (!selectedMentions.includes(selectedUser.user_id)) {
+      setSelectedMentions([...selectedMentions, selectedUser.user_id]);
+    }
+    
+    inputRef.current?.focus();
+  };
+
+  const filteredUsers = allUsers.filter(u => 
+    u.user_id !== user?.user_id &&
+    (u.name.toLowerCase().includes(mentionSearch) ||
+     (u.profession && u.profession.toLowerCase().includes(mentionSearch)))
+  );
+
   const handleSend = async () => {
     if (!inputText.trim() || sending) return;
     
@@ -95,13 +179,19 @@ export default function GlobalChatScreen() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${sessionToken}`,
         },
-        body: JSON.stringify({ content: inputText.trim() }),
+        body: JSON.stringify({ 
+          content: inputText.trim(),
+          mentions: selectedMentions,
+          reply_to: replyTo,
+        }),
       });
 
       if (response.ok) {
         const newMessage = await response.json();
         setMessages((prev) => [...prev, newMessage]);
         setInputText('');
+        setSelectedMentions([]);
+        setReplyTo(null);
         
         setTimeout(() => {
           flatListRef.current?.scrollToEnd();
@@ -114,25 +204,92 @@ export default function GlobalChatScreen() {
     }
   };
 
-  const renderMessage = ({ item }: { item: Message }) => {
-    const isMe = item.sender_id === user?.user_id;
+  const handleReply = (message: Message) => {
+    setReplyTo({
+      message_id: message.message_id,
+      sender_name: message.sender_name,
+      content: message.content,
+    });
+    setSelectedMessage(null);
+    inputRef.current?.focus();
+  };
+
+  const cancelReply = () => {
+    setReplyTo(null);
+  };
+
+  // Render message content with highlighted mentions
+  const renderContent = (content: string, mentions?: string[]) => {
+    if (!content) return null;
+    
+    // Find @mentions in the text
+    const parts = content.split(/(@\w+(?:\s\w+)?)/g);
     
     return (
-      <View style={[styles.messageRow, isMe && styles.messageRowMe]}>
+      <Text style={styles.messageText}>
+        {parts.map((part, index) => {
+          if (part.startsWith('@')) {
+            return (
+              <Text key={index} style={styles.mentionText}>
+                {part}
+              </Text>
+            );
+          }
+          return part;
+        })}
+      </Text>
+    );
+  };
+
+  const renderMessage = ({ item }: { item: Message }) => {
+    const isMe = item.sender_id === user?.user_id;
+    const isMentioned = item.mentions?.includes(user?.user_id || '');
+    
+    return (
+      <Pressable 
+        style={[
+          styles.messageRow, 
+          isMe && styles.messageRowMe,
+          isMentioned && styles.messageRowMentioned,
+        ]}
+        onLongPress={() => setSelectedMessage(item)}
+      >
         {!isMe && (
           <Image
             source={{ uri: item.sender_picture || 'https://via.placeholder.com/40' }}
             style={styles.avatar}
           />
         )}
-        <View style={[styles.messageBubble, isMe ? styles.messageBubbleMe : styles.messageBubbleOther]}>
+        <View style={[
+          styles.messageBubble, 
+          isMe ? styles.messageBubbleMe : styles.messageBubbleOther,
+          isMentioned && !isMe && styles.messageBubbleMentioned,
+        ]}>
           {!isMe && <Text style={styles.senderName}>{item.sender_name}</Text>}
-          <Text style={[styles.messageText, isMe && styles.messageTextMe]}>{item.content}</Text>
+          
+          {/* Reply Preview */}
+          {item.reply_to && (
+            <View style={styles.replyPreview}>
+              <View style={styles.replyBar} />
+              <View style={styles.replyContent}>
+                <Text style={styles.replyName}>{item.reply_to.sender_name}</Text>
+                <Text style={styles.replyText} numberOfLines={1}>
+                  {item.reply_to.content}
+                </Text>
+              </View>
+            </View>
+          )}
+          
+          {/* Message content with mentions */}
+          <Text style={[styles.messageText, isMe && styles.messageTextMe]}>
+            {renderContent(item.content, item.mentions)}
+          </Text>
+          
           <Text style={[styles.messageTime, isMe && styles.messageTimeMe]}>
             {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
           </Text>
         </View>
-      </View>
+      </Pressable>
     );
   };
 
@@ -185,13 +342,57 @@ export default function GlobalChatScreen() {
         }
       />
 
+      {/* Mentions Dropdown */}
+      {showMentions && filteredUsers.length > 0 && (
+        <View style={styles.mentionsDropdown}>
+          <Text style={styles.mentionsTitle}>Mention someone</Text>
+          {filteredUsers.slice(0, 5).map((u) => (
+            <TouchableOpacity
+              key={u.user_id}
+              style={styles.mentionItem}
+              onPress={() => selectMention(u)}
+            >
+              <Image
+                source={{ uri: u.picture || 'https://via.placeholder.com/32' }}
+                style={styles.mentionAvatar}
+              />
+              <View>
+                <Text style={styles.mentionName}>{u.name}</Text>
+                {u.profession && (
+                  <Text style={styles.mentionProfession}>#{u.profession}</Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {/* Reply Preview */}
+      {replyTo && (
+        <View style={styles.replyBar}>
+          <View style={styles.replyBarContent}>
+            <Ionicons name="arrow-undo" size={16} color={COLORS.primary} />
+            <View style={styles.replyBarText}>
+              <Text style={styles.replyBarName}>Replying to {replyTo.sender_name}</Text>
+              <Text style={styles.replyBarMessage} numberOfLines={1}>
+                {replyTo.content}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity onPress={cancelReply} style={styles.replyBarClose}>
+            <Ionicons name="close" size={20} color={COLORS.textLight} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.inputContainer}>
         <TextInput
+          ref={inputRef}
           style={styles.input}
-          placeholder="Say hi to everyone..."
+          placeholder="Say hi to everyone... Use @ to mention"
           placeholderTextColor={COLORS.textLight}
           value={inputText}
-          onChangeText={setInputText}
+          onChangeText={handleTextChange}
           multiline
           maxLength={500}
         />
@@ -207,6 +408,39 @@ export default function GlobalChatScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Message Actions Modal */}
+      <Modal
+        visible={!!selectedMessage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedMessage(null)}
+      >
+        <Pressable 
+          style={styles.modalOverlay}
+          onPress={() => setSelectedMessage(null)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Message Options</Text>
+            
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={() => selectedMessage && handleReply(selectedMessage)}
+            >
+              <Ionicons name="arrow-undo" size={20} color={COLORS.primary} />
+              <Text style={styles.modalOptionText}>Reply</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={() => setSelectedMessage(null)}
+            >
+              <Ionicons name="close" size={20} color={COLORS.textLight} />
+              <Text style={[styles.modalOptionText, { color: COLORS.textLight }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -287,6 +521,13 @@ const styles = StyleSheet.create({
   messageRowMe: {
     flexDirection: 'row-reverse',
   },
+  messageRowMentioned: {
+    backgroundColor: COLORS.mentionBg,
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
   avatar: {
     width: 32,
     height: 32,
@@ -306,6 +547,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderBottomLeftRadius: 4,
   },
+  messageBubbleMentioned: {
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.mention,
+  },
   senderName: {
     fontSize: 12,
     fontWeight: '600',
@@ -320,6 +565,10 @@ const styles = StyleSheet.create({
   messageTextMe: {
     color: COLORS.white,
   },
+  mentionText: {
+    color: COLORS.mention,
+    fontWeight: '600',
+  },
   messageTime: {
     fontSize: 10,
     color: COLORS.textLight,
@@ -327,6 +576,56 @@ const styles = StyleSheet.create({
   },
   messageTimeMe: {
     color: 'rgba(255,255,255,0.7)',
+  },
+  replyPreview: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    paddingLeft: 8,
+    borderLeftWidth: 2,
+    borderLeftColor: COLORS.primary,
+    opacity: 0.8,
+  },
+  replyBar: {
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  replyBarContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  replyBarText: {
+    flex: 1,
+  },
+  replyBarName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  replyBarMessage: {
+    fontSize: 13,
+    color: COLORS.textLight,
+  },
+  replyBarClose: {
+    padding: 4,
+  },
+  replyContent: {
+    flex: 1,
+  },
+  replyName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  replyText: {
+    fontSize: 12,
+    color: COLORS.textLight,
   },
   emptyState: {
     flex: 1,
@@ -344,6 +643,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textLight,
     marginTop: 4,
+  },
+  mentionsDropdown: {
+    backgroundColor: COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    padding: 12,
+    maxHeight: 200,
+  },
+  mentionsTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textLight,
+    marginBottom: 8,
+  },
+  mentionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 10,
+  },
+  mentionAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  mentionName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  mentionProfession: {
+    fontSize: 12,
+    color: COLORS.primary,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -376,5 +708,38 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: COLORS.textLight,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 20,
+    width: '80%',
+    maxWidth: 300,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  modalOptionText: {
+    fontSize: 15,
+    color: COLORS.text,
+    fontWeight: '500',
   },
 });
