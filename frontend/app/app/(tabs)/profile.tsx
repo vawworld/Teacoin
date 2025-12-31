@@ -70,6 +70,8 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [followCounts, setFollowCounts] = useState<FollowCounts>({ followers: 0, following: 0 });
   const [friendRequestCount, setFriendRequestCount] = useState(0);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -98,10 +100,11 @@ export default function ProfileScreen() {
       if (requestsRes.ok) setSellerRequests(await requestsRes.json());
       
       if (friendsRes.ok) {
-        const friends = await friendsRes.json();
+        const friendsList = await friendsRes.json();
+        setFriends(friendsList);
         setFollowCounts({
-          followers: friends.length,
-          following: friends.length,
+          followers: friendsList.length,
+          following: friendsList.length,
         });
       }
       
