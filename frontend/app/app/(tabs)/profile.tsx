@@ -13,8 +13,10 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import Constants from 'expo-constants';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
+                    process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 // TEAFRIENDS Brand Colors
 const COLORS = {
@@ -45,12 +47,18 @@ interface SellerRequest {
   profession: string | null;
 }
 
+interface FollowCounts {
+  followers: number;
+  following: number;
+}
+
 export default function ProfileScreen() {
   const { user, logout, sessionToken } = useAuth();
   const router = useRouter();
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [sellerRequests, setSellerRequests] = useState<SellerRequest[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [followCounts, setFollowCounts] = useState<FollowCounts>({ followers: 0, following: 0 });
 
   useFocusEffect(
     useCallback(() => {
@@ -60,17 +68,32 @@ export default function ProfileScreen() {
 
   const loadData = async () => {
     try {
-      const [walletRes, requestsRes] = await Promise.all([
+      const [walletRes, requestsRes, followersRes, followingRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/wallet`, {
           headers: { Authorization: `Bearer ${sessionToken}` },
         }),
         fetch(`${BACKEND_URL}/api/admin/seller-requests`, {
           headers: { Authorization: `Bearer ${sessionToken}` },
         }),
+        fetch(`${BACKEND_URL}/api/followers`, {
+          headers: { Authorization: `Bearer ${sessionToken}` },
+        }),
+        fetch(`${BACKEND_URL}/api/following`, {
+          headers: { Authorization: `Bearer ${sessionToken}` },
+        }),
       ]);
 
       if (walletRes.ok) setWallet(await walletRes.json());
       if (requestsRes.ok) setSellerRequests(await requestsRes.json());
+      
+      if (followersRes.ok && followingRes.ok) {
+        const followers = await followersRes.json();
+        const following = await followingRes.json();
+        setFollowCounts({
+          followers: followers.length,
+          following: following.length,
+        });
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
