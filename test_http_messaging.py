@@ -7,7 +7,7 @@ import requests
 import json
 import uuid
 
-BASE_URL = "https://teacoin-wallet.preview.emergentagent.com/api"
+BASE_URL = "https://teasocial-preview.preview.emergentagent.com/api"
 
 def test_http_messaging_endpoint():
     """Test the new HTTP messaging endpoint specifically"""

@@ -1,230 +1,194 @@
 <analysis>
-
 <original_problem_statement>
-The initial goal was to build an Android chat app, TEAFRIENDS, similar to Slack. Core features included detailed user profiles with professions, user search (#singer), and 1-on-1/group chats.
+The project is an Android chat app, TEAFRIENDS. Initially a Slack clone, it evolved to include a TeaCoins wallet and marketplace system where users can buy/sell tea. An admin (Kummar Sambhav) approves seller applications.
 
-This was significantly expanded by a new feature request: a TeaCoins wallet system.
-- **Wallet & Currency**: Users have a wallet with TeaCoins. New users are credited with 100 TeaCoins upon joining.
-- **Marketplace**: Users can order tea from designated sellers within the app.
-- **Seller Role**: Users can apply to become a seller. An admin must approve these requests. Sellers can create a menu of items they sell.
-- **Ordering Flow**:
-    1. A user places an order for tea.
-    2. The seller receives a notification for the new order.
-    3. The seller fulfills the order.
-    4. The buyer confirms the delivery in their app.
-    5. Upon confirmation, 1 TeaCoin is automatically transferred from the buyer's wallet to the seller's wallet.
-- **Admin Role**: A designated admin user (Kummar Sambhav) needs a dashboard to approve seller applications.
-- **UI/UX**: The user requested a professional-looking UI using brand colors, with a dedicated Wallet tab in the main navigation.
+The latest set of feature requests introduces a comprehensive privacy and social layer:
+1.  **Follower System**: Implement an Instagram-style, one-way follow system.
+2.  **Message Requests**: Non-followers can send an initial message, but it must be accepted by the recipient from a Message Requests screen before a full chat conversation can begin.
+3.  **Profile Stats**: User profiles should display their follower and following counts.
+4.  **Global Chat**: A new, separate screen for a public chat room where all users can converse, similar to a Discord channel.
+5.  **Audio Notifications**: Add sound effects for new order notifications (for sellers) and for sending/receiving chat messages.
 </original_problem_statement>
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack Expo (React Native) and FastAPI application. The app has Google OAuth, user profiles, user search, and basic chat functionality.
+A full-stack Expo (React Native) and FastAPI application with Google OAuth, user profiles, chat, and a mostly functional TeaCoins wallet/marketplace system. Users can apply to be sellers, an admin can approve them, sellers can add menu items with custom prices, and users can order items. A robust back-and-forth debugging process has fixed numerous issues related to authentication, UI state, and button actions on mobile.
 
-A large TeaCoins wallet system has been added. This includes:
-- **Backend**: New database models and API endpoints for wallets, transactions, menu items, orders, and a seller application/approval system. The backend automatically grants 100 TeaCoins to new users.
-- **Frontend**:
-    - A complete UI overhaul with a professional design using a brown/cream color palette.
-    - A new main navigation tab for Wallet.
-    - Screens for viewing the wallet, ordering tea, viewing my orders, applying to be a seller, and a seller-specific dashboard.
-    - An admin dashboard, visible only to the admin user (Kummar Sambhav), for approving seller requests.
-- **Authentication**: The authentication context () has been updated to use  to persist the user's session token, fixing a major bug where users were logged out on every app refresh.
+The new social/privacy features are partially implemented:
+- **Backend**: New database models and API endpoints exist for the follow/unfollow logic, message requests (creation, acceptance), and retrieving follower/following counts. The chat creation logic has been updated to create a message_request instead of a direct conversation if the users don't follow each other.
+- **Frontend**: New placeholder screens  and  have been created. The main  tab has been updated to include UI elements to navigate to these new screens. The user profile page () and the personal profile tab () have been significantly refactored to support the new follower system, but the work is incomplete.
 
 **Last working item**:
-    - Last item agent was working: Debugging a 401 Unauthorized error that occurs when a mobile user clicks the Apply to Become a Seller button.
-    - Reasoning: The agent discovered through backend logging that the mobile client was sending the literal string  as the  header token, causing authentication to fail. The agent's last action was to modify the  to explicitly check for  and treat it as a logged-out state. The hypothesis is that mobile users who logged in before this fix have a bad token stored and need to re-authenticate.
-    - Status: USER VERIFICATION PENDING
+    - Last item agent was working: Implementing the UI to display follower and following counts on the user's personal profile tab. The agent had just added the state management and was in the process of adding the UI elements and styling to .
+    - Status: IN PROGRESS
     - Agent Testing Done: N
-    - Which testing method agent to use? manual testing by curl
+    - Which testing method agent to use? Frontend testing agent
     - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Apply to Become a Seller button fails on mobile (P0)
-  - Issue 2: Order notifications for sellers are not implemented (P1)
-  - Issue 3: Auth cancellation leads to an error page (P2)
+  - Issue 1: Automatic order notification sound does not work (P0)
+  - Issue 2:  is unreliable on mobile (P2)
 
   Issues Detail:
-  - Issue 1:
-     - Description: When a user on a mobile device (Expo Go) tries to apply to become a seller, the request fails with a 401 Unauthorized error. The backend logs confirmed the  token is being received as the string .
-     - Attempted fixes: The agent updated  to better handle null or invalid tokens stored in . The theory is that affected users need to log out and log back in to generate and store a valid token.
+  - Issue 1: 
+     - Description: A sound should play automatically for a seller when a new order arrives. While a manual test button for the sound now works (after extensive debugging), the automatic triggering on a new order event fails. The logic for detecting a new order is likely flawed. The latest attempt involves polling every 3 seconds and comparing sets of order IDs, but it's still not functioning correctly.
+     - Attempted fixes:
+        1. Switched from comparing order counts to comparing sets of order IDs.
+        2. Fixed race conditions between initial data load and polling start.
+        3. Changed sound file sources from remote URLs to embedded base64 data URIs.
+        4. Added haptic feedback as a fallback.
+        5. Increased polling frequency.
      - Next debug checklist:
-        1. Instruct the user (specifically yogesh sahu who reported it) to log out of the app on their mobile device and log back in.
-        2. Ask the user to try clicking the Apply to Become a Seller button again.
-        3. If it still fails, check the backend logs (Error: too many arguments
-tail [-f] <name> [stdout|stderr] (default stdout)
-Ex:
-tail -f <name>		Continuous tail of named process stdout
-			Ctrl-C to exit.
-tail -100 <name>	last 100 *bytes* of process stdout
-tail <name> stderr	last 1600 *bytes* of process stderr) for the  token received from the  call.
-        4. Re-examine  to trace how the token is being set and retrieved from  specifically in the Expo Go mobile environment.
-     - Why fix this issue and what will be achieved with the fix? This is a core part of the TeaCoins feature. Fixing it will allow the seller ecosystem to function as requested.
-     - Status:  USER VERIFICATION PENDING
-     - Is recurring issue? Y (Part of a larger, recurring theme of authentication issues)
+        1. In , add extensive  statements inside the  interval. Log the  (from ) and the  fetched from the API on each poll.
+        2. Manually place an order as a different user and observe the logs to see if the new order ID appears and if the  condition is correctly met.
+        3. Suspect a state/ref synchronization issue. Ensure  is being updated correctly *after* a notification is triggered.
+     - Why fix this issue and what will be achieved with the fix? This is a core usability feature for sellers, ensuring they are notified of new orders promptly.
+     - Status:  IN PROGRESS
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on other issue: None
+  - Issue 2: 
+     - Description: The native  confirmation dialog has repeatedly failed to trigger API calls on the user's mobile device (likely Expo Go). This caused bugs in the admin approval, menu item deletion, and order placement flows.
+     - Attempted fixes: The agent successfully fixed every instance of this bug by removing the  confirmation and having the  handler call the API directly. This is a workaround, not a root cause fix.
+     - Next debug checklist: This is not a blocking issue as workarounds are in place. For future tasks, avoid using  for critical actions. If a confirmation is needed, build a custom modal component instead.
+     - Why fix this issue and what will be achieved with the fix? Understanding this will prevent similar bugs in the future and improve UX by allowing for safe confirmation dialogs.
+     - Status:  RESOLVED (via workaround)
+     - Is recurring issue? Y
      - Should Test frontend/backend/both after fix? frontend
      - Blocked on other issue: None
 
-  - Issue 2:
-     - Description: The user story requires that when an order is placed, order notification will go to teaseller. This has not been implemented. Sellers currently have to manually navigate to their My Orders screen to see if they have new orders.
-     - Attempted fixes: None.
-     - Next debug checklist:
-        1. Decide on a notification mechanism (e.g., push notifications, in-app polling).
-        2. If polling, create a new endpoint like  that returns new/pending orders.
-        3. The seller dashboard or a global UI element would need to poll this endpoint.
-     - Why fix this issue and what will be achieved with the fix? This is critical for the usability of the ordering system. Without notifications, sellers are unlikely to see new orders in a timely manner.
-     - Status:  NOT STARTED
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? both
-     - Blocked on other issue: No
-
-  - Issue 3:
-     - Description: (From previous fork) When a user is on the Google login selection page and presses cancel, it shows an error page instead of returning to the app's login screen.
-     - Attempted fixes: None.
-     - Next debug checklist:
-        1. Replicate the issue by starting the login flow and canceling.
-        2. Investigate how the auth provider redirect is handled on failure in .
-        3. The app needs to detect an  query parameter from the auth service and redirect to the login page.
-     - Why fix this issue and what will be achieved with the fix? Improves user experience and provides graceful error handling for authentication.
-     - Status: NOT STARTED
-     - Is recurring issue? N
-     - Should Test frontend/backend/both after fix? frontend
-     - Blocked on other issue: No
-
 **In progress Task List**:
-  - Task 1: Make the Ordering System Fully Functional (P0)
+  - Task 1: Complete the Friend/Follower Consent System (P0)
 
-  Task Detail:
-  - Task 1:
-     - Description: While the backend APIs and frontend screens for ordering exist, the flow is incomplete and blocked.
-     - Where to resume:
-        1. First, resolve the Apply to Become a Seller authentication bug (Pending Issue #1).
-        2. Implement the seller order notifications (Pending Issue #2).
-        3. Conduct an end-to-end test of the entire flow: User A applies to be a seller -> Admin approves -> Seller A adds a menu item -> User B orders from Seller A -> Seller A fulfills -> User B confirms delivery -> Verify TeaCoin transfer.
-     - What will be achieved with this? This will complete the main feature request from this entire session.
-     - Status:  BLOCKED
+ Task Detail:
+  - Task 1: 
+     - Description: The backend APIs and DB models are mostly in place, but the frontend is only partially built. The goal is to have a fully functional Instagram-like follow and message request system.
+     - Where to resume: 
+        1. **Finish Profile Pages**: The agent was adding follower/following stats to . This needs to be completed and tested. The public profile page  was overwritten with new code and needs to be verified to correctly display user info, follower counts, and the correct button (Follow, Unfollow, Requested, Message).
+        2. **Build Message Requests Screen**: Implement the UI and logic for . It needs to fetch pending requests from  and have buttons to Accept or Decline them, calling the respective backend endpoints.
+        3. **Build Global Chat Screen**: Implement the UI and logic for . This will function similarly to the existing 1-on-1 chat screen but will be hardcoded to a specific global conversation ID.
+     - What will be achieved with this? A major new privacy and social feature set will be added to the app, as requested by the user.
+     - Status:  IN PROGRESS
      - Should Test frontend/backend/both after fix? both
-     - Blocked on something: Apply to Become a Seller button fails on mobile (Pending Issue #1)
+     - Blocked on something: None
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - **Display Enhanced Profile Fields (P1)**: The user profile model contains fields like , , , , , etc. The UI for *inputting* this data exists (), but the UI for *displaying* it on profile pages ( and ) was never built. This is a carry-over task from a previous fork.
+    - **Display Enhanced Profile Fields (P1)**: This task from a previous fork has been consistently overlooked. The user profile model contains fields like , , , etc. The UI for *inputting* this data exists, but it is not displayed on any profile pages ( or ). This needs to be implemented.
 - **Future Tasks**:
-    - **Real-time Order Notifications (P2)**: Implement push notifications for a better seller experience instead of polling.
-    - **Advanced Search Filters (P2)**: Allow users to search/filter by the new enhanced profile fields.
+    - **Real-time Social Features (P2)**: The current implementation for message request notifications and global chat relies on HTTP polling. This should be migrated to use the existing Socket.IO connection for instant, real-time updates. New socket events like  and  would be needed.
 
 **Completed work in this session**
-- **TeaCoins Wallet System (Backend & Frontend)**: Implemented the entire feature, including database models, API endpoints, and frontend screens for wallets, transactions, ordering, and seller management.
-- **Admin Dashboard**: Created a system to designate an admin user (Kummar Sambhav) and provided a dashboard for them to approve seller applications.
-- **Professional UI/UX Redesign**: Revamped the entire application with a consistent, professional design using a new brand color palette, gradients, and improved layouts.
-- **Authentication Persistence**: Fixed a critical and recurring bug by integrating  into  to persist the session token, preventing users from being logged out on app reloads.
-- **Login Flow Bug Fix**: Resolved an issue where the app would get stuck in a login loop after the auth persistence fix was applied.
-- **Data Migration for Existing Users**: Wrote and executed a Python script to update all existing user documents in the database, granting them 100 TeaCoins to ensure feature parity.
-- **Chat Functionality Restored**: The implementation of auth persistence also fixed the recurring messages not sending issue, which was caused by an invalid/missing auth token.
+- **Admin Approval Flow Fixed**: Debugged and fixed a critical bug where the admin Approve button was not working. The issue was a combination of a non-admin user trying to approve, followed by a frontend bug where  was preventing the API call.
+- **Custom Menu Pricing**: Implemented the ability for sellers to set a custom price for each menu item. This involved updates across the full stack: backend models, API endpoints for item creation/ordering, and frontend UI for sellers and buyers.
+- **Order Flow UX Improved**: Fixed multiple UX issues in the ordering flow. Buttons now show a Processing... state. Successfully ordered items show an Ordered ✓ state to prevent duplicate orders.
+- **TeaCoin Transfer Logic Fixed**: Resolved a bug where TeaCoins were not being transferred to the seller. The issue was that the buyer-side Confirm Delivery button was not working (due to the  issue).
+- **Robust Navigation**: Fixed a bug where sellers could get stuck on the seller dashboard. Replaced all instances of  with a more robust check () that provides a fallback route, improving navigation reliability across the app.
+- **Audio/Haptic Feedback**: Added sound effects for chat messages and a (partially working) notification for new seller orders using  and .
 
 **Earlier issues found/mentioned but not fixed**
-   - Issue 1: Enhanced Profile fields are not displayed in the UI.
-     - Why to solve this issue and what will be achieved with this? This was part of the original app's purpose—to connect users based on detailed profiles. Completing it would significantly enhance the user discovery aspect.
-     - Should Test frontend/backend/both after fix: frontend
-     - Is recurring issue? Y (This is a pending task from the previous fork that was forgotten).
+   - Issue 1: Automatic order notification sound does not work. This is the highest priority pending bug. (Details above in Pending/In progress Issue list).
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: Chat messages not sending due to authentication failures.
-  - Recurrence count: This issue recurred multiple times in this session.
-  - Status: RESOLVED. The root cause was identified as a non-persistent session token. The agent fixed this by implementing  in .
+  - Issue recurrence in previous fork:  causing silent failures on mobile.
+  - Recurrence count: This pattern was the root cause of at least 4 distinct bugs in this session (seller approval, item deletion, order placement, delivery confirmation).
+  - Status: RESOLVED (via workaround). The agent has now learned to avoid  for critical actions.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 - **Frontend**: React Native with Expo, Expo Router.
-- **Backend**: Python with FastAPI.
+- **Backend**: Python with FastAPI, Socket.IO.
 - **Database**: MongoDB.
-- **Authentication**: Emergent Google OAuth. Session token is now persisted on the client using .
-- **UI**: Custom components with .  is used for professional styling.
-- **Data Migration**: A one-off Python script was used to update existing documents in the database.
+- **Audio/Haptics**:  for playing sounds,  for vibration feedback.
+- **Social Features**: One-way follower model. A message request acts as a gate before a full conversation is established between non-followers.
+- **State Management**: Primarily , , . State is being passed down through props and context providers.
 
 **key DB schema**
   - **users**: 
-  - **conversations**: (unchanged)
-  - **messages**: (unchanged)
   - **menu_items**: 
   - **orders**: 
-  - **transactions**: 
+  - **follows**:  (New)
+  - **message_requests**:  (New)
+  - **conversations**:  (Type field is now used to distinguish)
 
 **changes in tech stack**
-- Added  for client-side session persistence.
-- Added  for UI styling.
+  - Added  for audio playback.
+  - Added  for system vibrations.
 
 **All files of reference**
-- : Heavily modified to include all backend logic for the TeaCoins system.
-- : Significantly refactored to add robust session token persistence with AsyncStorage. This file is critical for debugging auth issues.
-- : Defines the new tab navigation, including the central Wallet tab.
-- : The main screen for the wallet feature.
-- : The UI for the admin to approve sellers.
-- : The screen containing the button that is currently failing.
+- : Contains the still-buggy order notification logic.
+- : Was being actively edited to add follower stats.
+- : Was overwritten with a new implementation for the follower system and needs to be fully reviewed and tested.
+- : New file, needs to be implemented.
+- : New file, needs to be implemented.
+- : Heavily modified with new endpoints for all social features.
 
 **Areas that need refactoring**:
-- The entire directory  is deprecated and was created by mistake. It contains outdated copies of files and should be deleted to prevent future confusion.
+- The polling logic for new orders in  is complex and buggy. It should be simplified or debugged with more logging.
+- The user profile page () was completely overwritten. It needs a careful review to ensure no existing functionality (like viewing basic profile info) was lost.
 
 **key api endpoints**
-- **Wallet & Orders**:
-  - : Get current user's wallet balance and transactions.
-  - : Create an order.
-  - : Get orders for the current user.
-  - : Confirm an order delivery.
-- **Seller**:
-  - : Apply to become a seller.
-  - : Check application status.
-  - : Add a menu item.
-- **Admin**:
-  - : Get pending seller applications.
-  - : Approve a seller application.
-  - : Get stats for the admin dashboard.
+- **Social**:
+  - : Follow a user.
+  - : Unfollow a user.
+  - : Get a user's followers.
+  - : Get users someone is following.
+  - : Get pending message requests for the current user.
+  - : Accept a request.
+  - : Decline a request.
+- **Chat**:
+  - : Modified to create message requests for non-followers.
 
 **Critical Info for New Agent**
-- **Mobile Auth is Fragile**: The most immediate problem is authentication on mobile devices sending a  token. The fix requires users to **log out and log back in**. Be prepared to guide the user through this. This auth flow has been a recurring source of bugs.
-- **Admin User**: The user Kummar Sambhav () has been manually set as an admin in the database. All admin functionality is tied to this user.
-- **Forgotten Task**: A task from the previous fork—displaying newly added profile fields (location, interests, etc.)—was completely forgotten. The data exists in the DB but is not shown anywhere in the UI.
-- **Duplicate Frontend Directories**: There is a confusing and unused directory at . The correct and active code is in . The unused one should be removed.
+- **PRIORITY 1**: Fix the automatic sound notification for new orders. This has been a frustrating bug for the user. The manual test button now works, so the issue is purely in the new order detection logic in .
+- **PRIORITY 2**: Complete the Friend/Follower feature. The backend is mostly done, but the frontend needs significant work on the profile pages and the new  and  screens.
+- **RECURRING BUG PATTERN**: The  component from React Native has consistently caused buttons to fail silently on the user's mobile device. Avoid using it for critical actions. If a confirmation is needed, plan to build a custom modal component.
+- **FORGOTTEN TASK**: A task to display enhanced profile fields (location, interests, etc.) on profile pages has been carried over from previous forks and completely ignored. This should be addressed after the current high-priority tasks.
 
 **documents created in this job**
-None.
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: When users are applying for becoming tea seller this button is not working... - Reports the 401 bug on the seller application screen. (IN PROGRESS)
-2.  **User**: thanks , chatting started again , also i can see the 100 teacoin... - Confirms wallet and chat are working and requests the admin/ordering flow to be made functional. (DONE, but with bugs)
-3.  **User**: other users wallet is not showing 100 teacoins - Reports bug where existing users have no teacoins. (FIXED)
-4.  **User**: its not logging in to th app its stuck - Reports the app is stuck in a login loop after the agent added auth persistence. (FIXED)
-5.  **User**: Looks wallet is there , now but chatting stopped , messeges are not going again - Reports a major regression where chat stopped working. (FIXED, related to auth persistence)
-6.  **User**: ok go ahead - Confirms agent can continue with UI styling.
-7.  **User**: pls continue - Confirms agent can continue after installing a package.
-8.  **User**: ok perfect , highlight these tabs with brand colors , make UI like professional app - Confirms wallet tab is visible and requests a UI overhaul. (DONE)
-9.  **User**: I cant see the wallet in the bottom - Reports the new wallet tab is not visible. (FIXED, was in the wrong directory)
-10. **User**: yes - Confirms the agent's plan to implement the TeaCoins feature.
+10. **User**: Requests a friend/follower consent system to prevent unwanted messages from strangers. (IN PROGRESS)
+9.  **User**: Asks for clarification on system design (Instagram vs. Facebook style) and also requests a global chat room. (DONE - Plan confirmed)
+8.  **User**: Asks how many sockets used so far. (ANSWERED)
+7.  **User**: Complains the friend request flow is invisible and asks for explicit send request buttons and follower counts on profiles. (IN PROGRESS)
+6.  **User**: Reports manual sound test button works, but automatic sound on order arrival does not. (PENDING - P0 Bug)
+5.  **User**: Reports automatic sound not working and manual button is also now broken. (REGRESSION - Since fixed)
+4.  **User**: Reports manual sound tap has a 10-second delay and suggests using system sounds for speed. (PARTIALLY ADDRESSED - Haptics added)
+3.  **User**: Confirms manual sound button is working again. (VERIFIED)
+2.  **User**: Asks to add a musical alert for order notifications and foley sounds for chat. (DONE, but with bugs)
+1.  **User**: Seller can't navigate back from the seller dashboard. (FIXED)
 
 **Project Health Check:**
 - **Broken**:
-    - The seller application flow () is non-functional on mobile due to a 401 Unauthorized error.
-    - The order fulfillment flow is incomplete as it lacks notifications for sellers.
+    - The automatic sound notification for new seller orders is not working.
 - **Mocked**: None.
 
 **3rd Party Integrations**
-- Emergent Google Social Login — uses Emergent's auth service. No user-provided key required.
-- : For client-side data persistence.
-- : For UI styling.
+- Emergent Google Social Login — uses Emergent's auth service.
+- 
+- 
+-  (for audio playback)
+-  (for vibration)
 
 **Testing status**
-- Testing agent used after significant changes: YES, a backend testing agent was used once but many changes were made after.
-- Troubleshoot agent used after agent stuck in loop: YES.
+- Testing agent used after significant changes: YES, the backend testing agent was used to verify the ordering flow.
+- Troubleshoot agent used after agent stuck in loop: NO, but the agent went through a lengthy manual debugging loop for the sound issue.
 - Test files created: None.
-- Known regressions: Chat functionality broke during development but was subsequently fixed. The Become a Seller auth flow is a new regression.
+- Known regressions: The sound notification feature has had several regressions during development but the manual test button is currently working.
 
 **Credentials to test flow:**
-No credentials needed. Use the Continue with Google button. One specific user, Kummar Sambhav (), is an admin and will see the Admin Dashboard. Any other user can test the standard user/seller flow.
+Use Continue with Google.
+- **Admin**:  (Can approve seller requests).
+- **Seller**:  (Yogesh Sahu, can create menu items and receives orders).
+- **Buyer**: Any other user, e.g.,  (Can place orders).
 
 **What agent forgot to execute**
-- The agent completely forgot to implement the UI to **display the enhanced profile fields** (, , , etc.) on user profile pages. This was an  task from the initial handover summary.
-- The agent did not implement the **seller notification** part of the ordering flow as requested by the user (order notification will go to teaseller).
+- The agent has not implemented the UI to **display the enhanced profile fields** (, , , etc.) on user profile pages. This is a task from the original problem statement that has been repeatedly missed.
+- The agent has not fully resolved the automatic order notification sound bug.
 
 </analysis>

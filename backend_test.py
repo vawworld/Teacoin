@@ -12,7 +12,7 @@ import sys
 from datetime import datetime
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://teacoin-wallet.preview.emergentagent.com/api"
+BACKEND_URL = "https://teasocial-preview.preview.emergentagent.com/api"
 ADMIN_EMAIL = "11.kumarsambhav@gmail.com"
 
 class TeaCoinsAPITester:
