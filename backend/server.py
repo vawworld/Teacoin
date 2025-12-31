@@ -1215,6 +1215,44 @@ async def get_follow_status(
         "is_mutual": i_follow_them is not None and they_follow_me is not None
     }
 
+@api_router.get("/users/{user_id}/followers")
+async def get_user_followers(
+    user_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Get list of users following a specific user"""
+    follows = await db.follows.find(
+        {"following_id": user_id},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    follower_ids = [f["follower_id"] for f in follows]
+    users = await db.users.find(
+        {"user_id": {"$in": follower_ids}},
+        {"_id": 0, "user_id": 1, "name": 1, "email": 1, "picture": 1, "profession": 1}
+    ).to_list(1000)
+    
+    return users
+
+@api_router.get("/users/{user_id}/following")
+async def get_user_following(
+    user_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Get list of users a specific user is following"""
+    follows = await db.follows.find(
+        {"follower_id": user_id},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    following_ids = [f["following_id"] for f in follows]
+    users = await db.users.find(
+        {"user_id": {"$in": following_ids}},
+        {"_id": 0, "user_id": 1, "name": 1, "email": 1, "picture": 1, "profession": 1}
+    ).to_list(1000)
+    
+    return users
+
 # ==================== MESSAGE REQUESTS ====================
 
 @api_router.get("/message-requests")
