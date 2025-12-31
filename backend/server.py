@@ -1949,16 +1949,27 @@ class ReelCreate(BaseModel):
 
 @api_router.post("/reels/upload")
 async def upload_reel(
-    file: UploadFile = File(...),
+    file: UploadFile = File(None),
     visibility: str = Form("public"),
     caption: str = Form(""),
     current_user: User = Depends(require_auth)
 ):
     """Upload and compress a video reel (max 60 seconds)"""
     
-    # Validate file type
-    if not file.content_type or not file.content_type.startswith("video/"):
-        raise HTTPException(status_code=400, detail="Only video files are allowed")
+    # Debug logging
+    logging.info(f"Reel upload attempt - user: {current_user.user_id}")
+    logging.info(f"File received: {file}")
+    logging.info(f"Visibility: {visibility}, Caption: {caption}")
+    
+    if file is None:
+        raise HTTPException(status_code=400, detail="No file uploaded. Please select a video file.")
+    
+    logging.info(f"File content_type: {file.content_type}, filename: {file.filename}")
+    
+    # Validate file type - be more lenient
+    content_type = file.content_type or ""
+    if not content_type.startswith("video/") and not file.filename.endswith(('.mp4', '.mov', '.avi', '.mkv', '.webm')):
+        raise HTTPException(status_code=400, detail=f"Only video files are allowed. Received: {content_type}")
     
     reel_id = f"reel_{uuid.uuid4().hex[:12]}"
     
