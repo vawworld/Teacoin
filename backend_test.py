@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-TEAFRIENDS Backend Social Features Testing
-Tests Follow System, Message Requests, and Global Chat APIs
+TEAFRIENDS Backend API Testing - Friend Request System & Global Chat
+Testing the NEW friend request system APIs and enhanced global chat with mentions/notifications
 """
 
 import requests
