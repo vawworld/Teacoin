@@ -174,6 +174,19 @@ export default function ProfileScreen() {
               <Text style={styles.professionText}>#{user.profession}</Text>
             </View>
           )}
+
+          {/* Follower/Following Stats */}
+          <View style={styles.statsRow}>
+            <TouchableOpacity style={styles.statItem}>
+              <Text style={styles.statNumber}>{followCounts.followers}</Text>
+              <Text style={styles.statLabel}>Followers</Text>
+            </TouchableOpacity>
+            <View style={styles.statDivider} />
+            <TouchableOpacity style={styles.statItem}>
+              <Text style={styles.statNumber}>{followCounts.following}</Text>
+              <Text style={styles.statLabel}>Following</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </LinearGradient>
 
