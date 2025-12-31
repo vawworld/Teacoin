@@ -35,9 +35,9 @@ export default function TabsLayout() {
           paddingTop: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
-          marginTop: 4,
+          marginTop: 2,
         },
         tabBarIconStyle: {
           marginTop: 4,
@@ -52,7 +52,7 @@ export default function TabsLayout() {
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons 
                 name={focused ? 'chatbubbles' : 'chatbubbles-outline'} 
-                size={24} 
+                size={22} 
                 color={color} 
               />
             </View>
@@ -60,14 +60,14 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="search"
+        name="reels"
         options={{
-          title: 'Discover',
+          title: 'Reels',
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons 
-                name={focused ? 'compass' : 'compass-outline'} 
-                size={24} 
+                name={focused ? 'play-circle' : 'play-circle-outline'} 
+                size={22} 
                 color={color} 
               />
             </View>
@@ -85,12 +85,27 @@ export default function TabsLayout() {
             ]}>
               <Ionicons 
                 name="cafe" 
-                size={28} 
+                size={26} 
                 color={focused ? COLORS.white : COLORS.primary} 
               />
             </View>
           ),
           tabBarLabel: () => null,
+        }}
+      />
+      <Tabs.Screen
+        name="search"
+        options={{
+          title: 'Discover',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? styles.activeIconContainer : undefined}>
+              <Ionicons 
+                name={focused ? 'compass' : 'compass-outline'} 
+                size={22} 
+                color={color} 
+              />
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
@@ -101,7 +116,7 @@ export default function TabsLayout() {
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons 
                 name={focused ? 'person' : 'person-outline'} 
-                size={24} 
+                size={22} 
                 color={color} 
               />
             </View>
@@ -120,12 +135,12 @@ const styles = StyleSheet.create({
   },
   walletIconContainer: {
     backgroundColor: COLORS.background,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -20,
+    marginTop: -18,
     borderWidth: 4,
     borderColor: COLORS.white,
     shadowColor: COLORS.primary,
