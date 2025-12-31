@@ -1109,6 +1109,259 @@ async def cancel_order(
     
     return {"message": f"Order cancelled. {order_price} TeaCoin{'s' if order_price > 1 else ''} refunded."}
 
+# ==================== FOLLOW SYSTEM ====================
+
+@api_router.post("/follow/{user_id}")
+async def follow_user(
+    user_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Follow a user"""
+    if user_id == current_user.user_id:
+        raise HTTPException(status_code=400, detail="You cannot follow yourself")
+    
+    # Check if user exists
+    target_user = await db.users.find_one({"user_id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if already following
+    existing = await db.follows.find_one({
+        "follower_id": current_user.user_id,
+        "following_id": user_id
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Already following this user")
+    
+    # Create follow relationship
+    await db.follows.insert_one({
+        "follower_id": current_user.user_id,
+        "following_id": user_id,
+        "created_at": datetime.now(timezone.utc)
+    })
+    
+    return {"message": f"Now following {target_user.get('name', 'user')}"}
+
+@api_router.delete("/follow/{user_id}")
+async def unfollow_user(
+    user_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Unfollow a user"""
+    result = await db.follows.delete_one({
+        "follower_id": current_user.user_id,
+        "following_id": user_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="You are not following this user")
+    
+    return {"message": "Unfollowed successfully"}
+
+@api_router.get("/followers")
+async def get_followers(current_user: User = Depends(require_auth)):
+    """Get list of users following me"""
+    follows = await db.follows.find(
+        {"following_id": current_user.user_id},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    # Get follower user details
+    follower_ids = [f["follower_id"] for f in follows]
+    users = await db.users.find(
+        {"user_id": {"$in": follower_ids}},
+        {"_id": 0, "user_id": 1, "name": 1, "email": 1, "picture": 1, "profession": 1}
+    ).to_list(1000)
+    
+    return users
+
+@api_router.get("/following")
+async def get_following(current_user: User = Depends(require_auth)):
+    """Get list of users I'm following"""
+    follows = await db.follows.find(
+        {"follower_id": current_user.user_id},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    # Get following user details
+    following_ids = [f["following_id"] for f in follows]
+    users = await db.users.find(
+        {"user_id": {"$in": following_ids}},
+        {"_id": 0, "user_id": 1, "name": 1, "email": 1, "picture": 1, "profession": 1}
+    ).to_list(1000)
+    
+    return users
+
+@api_router.get("/follow/status/{user_id}")
+async def get_follow_status(
+    user_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Check if I follow a user and if they follow me"""
+    i_follow_them = await db.follows.find_one({
+        "follower_id": current_user.user_id,
+        "following_id": user_id
+    })
+    
+    they_follow_me = await db.follows.find_one({
+        "follower_id": user_id,
+        "following_id": current_user.user_id
+    })
+    
+    return {
+        "i_follow_them": i_follow_them is not None,
+        "they_follow_me": they_follow_me is not None,
+        "is_mutual": i_follow_them is not None and they_follow_me is not None
+    }
+
+# ==================== MESSAGE REQUESTS ====================
+
+@api_router.get("/message-requests")
+async def get_message_requests(current_user: User = Depends(require_auth)):
+    """Get pending message requests (conversations from non-followers)"""
+    # Get list of people who follow me
+    followers = await db.follows.find(
+        {"following_id": current_user.user_id},
+        {"_id": 0, "follower_id": 1}
+    ).to_list(1000)
+    follower_ids = [f["follower_id"] for f in followers]
+    
+    # Get my direct conversations
+    conversations = await db.conversations.find(
+        {
+            "type": "direct",
+            "participants": current_user.user_id
+        },
+        {"_id": 0}
+    ).to_list(1000)
+    
+    # Filter to those where the other person is NOT a follower
+    # and the conversation was NOT started by me
+    requests = []
+    for conv in conversations:
+        other_id = [p for p in conv["participants"] if p != current_user.user_id][0]
+        
+        # Check if this is a message request (not from a follower, not accepted yet)
+        if other_id not in follower_ids:
+            # Check if there's a message request record
+            request = await db.message_requests.find_one({
+                "conversation_id": conv["conversation_id"],
+                "recipient_id": current_user.user_id
+            })
+            
+            if request and request.get("status") == "pending":
+                # Get other user details
+                other_user = await db.users.find_one(
+                    {"user_id": other_id},
+                    {"_id": 0, "user_id": 1, "name": 1, "picture": 1, "profession": 1}
+                )
+                
+                # Get last message
+                last_msg = await db.messages.find_one(
+                    {"conversation_id": conv["conversation_id"]},
+                    {"_id": 0},
+                    sort=[("timestamp", -1)]
+                )
+                
+                requests.append({
+                    "conversation_id": conv["conversation_id"],
+                    "user": other_user,
+                    "last_message": last_msg,
+                    "created_at": request.get("created_at")
+                })
+    
+    return requests
+
+@api_router.get("/message-requests/count")
+async def get_message_requests_count(current_user: User = Depends(require_auth)):
+    """Get count of pending message requests"""
+    count = await db.message_requests.count_documents({
+        "recipient_id": current_user.user_id,
+        "status": "pending"
+    })
+    return {"count": count}
+
+@api_router.post("/message-requests/{conversation_id}/accept")
+async def accept_message_request(
+    conversation_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Accept a message request"""
+    result = await db.message_requests.update_one(
+        {
+            "conversation_id": conversation_id,
+            "recipient_id": current_user.user_id,
+            "status": "pending"
+        },
+        {"$set": {"status": "accepted"}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Message request not found")
+    
+    return {"message": "Message request accepted"}
+
+@api_router.post("/message-requests/{conversation_id}/decline")
+async def decline_message_request(
+    conversation_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Decline a message request"""
+    result = await db.message_requests.update_one(
+        {
+            "conversation_id": conversation_id,
+            "recipient_id": current_user.user_id,
+            "status": "pending"
+        },
+        {"$set": {"status": "declined"}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Message request not found")
+    
+    return {"message": "Message request declined"}
+
+# ==================== GLOBAL CHAT ====================
+
+GLOBAL_CHAT_ID = "global_teafriends_chat"
+
+@api_router.get("/chat/global")
+async def get_global_chat(current_user: User = Depends(require_auth)):
+    """Get global chat messages"""
+    messages = await db.global_messages.find(
+        {},
+        {"_id": 0}
+    ).sort("timestamp", -1).limit(100).to_list(100)
+    
+    # Return in chronological order
+    return list(reversed(messages))
+
+@api_router.post("/chat/global")
+async def send_global_message(
+    message: dict,
+    current_user: User = Depends(require_auth)
+):
+    """Send a message to global chat"""
+    content = message.get("content", "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Message content is required")
+    
+    msg_id = f"gmsg_{uuid.uuid4().hex[:12]}"
+    new_message = {
+        "message_id": msg_id,
+        "sender_id": current_user.user_id,
+        "sender_name": current_user.name,
+        "sender_picture": current_user.picture,
+        "content": content,
+        "timestamp": datetime.now(timezone.utc)
+    }
+    
+    await db.global_messages.insert_one(new_message.copy())
+    new_message["timestamp"] = new_message["timestamp"].isoformat()
+    
+    return new_message
+
 # ==================== CONVERSATION ROUTES ====================
 
 @api_router.post("/conversations")
