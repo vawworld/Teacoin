@@ -13,12 +13,14 @@ import {
   Platform,
   TextInput,
   KeyboardAvoidingView,
+  Pressable,
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import Constants from 'expo-constants';
 
 const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
@@ -107,55 +109,60 @@ export default function ReelsScreen() {
 
   const pickFromGallery = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow media library access to upload videos');
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please allow access to your photo library to upload videos.');
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsEditing: true,
+        quality: 0.7,
         videoMaxDuration: 60,
-        quality: 0.8,
       });
 
-      console.log('Gallery result:', result);
+      console.log('Gallery picker result:', JSON.stringify(result, null, 2));
 
-      if (!result.canceled && result.assets && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        console.log('Selected video:', asset.uri);
         setShowUploadModal(false);
-        uploadVideo(result.assets[0].uri);
+        await uploadVideo(asset.uri);
       }
     } catch (error) {
-      console.error('Error picking from gallery:', error);
-      Alert.alert('Error', 'Failed to select video from gallery');
+      console.error('Gallery picker error:', error);
+      Alert.alert('Error', 'Failed to pick video from gallery');
     }
   };
 
   const recordWithCamera = async () => {
     try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow camera access to record videos');
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please allow camera access to record videos.');
         return;
       }
 
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsEditing: true,
+        quality: 0.7,
         videoMaxDuration: 60,
-        quality: 0.8,
-        videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
       });
 
-      console.log('Camera result:', result);
+      console.log('Camera result:', JSON.stringify(result, null, 2));
 
-      if (!result.canceled && result.assets && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        console.log('Recorded video:', asset.uri);
         setShowUploadModal(false);
-        uploadVideo(result.assets[0].uri);
+        await uploadVideo(asset.uri);
       }
     } catch (error) {
-      console.error('Error recording:', error);
+      console.error('Camera error:', error);
       Alert.alert('Error', 'Failed to record video');
     }
   };
@@ -165,50 +172,53 @@ export default function ReelsScreen() {
     setUploadProgress('Preparing video...');
 
     try {
-      const formData = new FormData();
-      
-      const filename = videoUri.split('/').pop() || 'video.mp4';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `video/${match[1]}` : 'video/mp4';
-      
-      // For React Native, we need to use the full URI
-      formData.append('file', {
-        uri: videoUri,
-        name: filename,
-        type: type,
-      } as any);
-      
-      formData.append('visibility', visibility);
-      formData.append('caption', caption);
+      // Get file info
+      const fileInfo = await FileSystem.getInfoAsync(videoUri);
+      console.log('File info:', fileInfo);
 
-      setUploadProgress('Uploading & compressing...');
-      console.log('Starting upload to:', `${BACKEND_URL}/api/reels/upload`);
-      console.log('Video URI:', videoUri);
+      if (!fileInfo.exists) {
+        throw new Error('Video file does not exist');
+      }
 
-      const response = await fetch(`${BACKEND_URL}/api/reels/upload`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-          // Don't set Content-Type for FormData - fetch will set it with boundary
-        },
-        body: formData,
-      });
+      setUploadProgress('Uploading video...');
 
-      console.log('Upload response status:', response.status);
+      // Use FileSystem.uploadAsync for reliable uploads
+      const uploadResult = await FileSystem.uploadAsync(
+        `${BACKEND_URL}/api/reels/upload`,
+        videoUri,
+        {
+          httpMethod: 'POST',
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          fieldName: 'file',
+          parameters: {
+            visibility: visibility,
+            caption: caption || '',
+          },
+          headers: {
+            Authorization: `Bearer ${sessionToken}`,
+          },
+        }
+      );
 
-      if (response.ok) {
-        const data = await response.json();
-        Alert.alert('Success! 🎬', 'Your reel has been uploaded!');
+      console.log('Upload result:', uploadResult);
+
+      if (uploadResult.status === 200 || uploadResult.status === 201) {
+        Alert.alert('Success! 🎬', 'Your reel has been uploaded and is being processed!');
         setCaption('');
+        setVisibility('public');
         loadReels();
       } else {
-        const errorText = await response.text();
-        console.error('Upload error response:', errorText);
-        Alert.alert('Upload Failed', 'Failed to upload video. Please try again.');
+        console.error('Upload failed:', uploadResult.body);
+        let errorMessage = 'Failed to upload video';
+        try {
+          const errorData = JSON.parse(uploadResult.body);
+          errorMessage = errorData.detail || errorMessage;
+        } catch (e) {}
+        Alert.alert('Upload Failed', errorMessage);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      Alert.alert('Error', 'Failed to upload video. Please try again.');
+      Alert.alert('Upload Error', error.message || 'Failed to upload video. Please try again.');
     } finally {
       setUploading(false);
       setUploadProgress('');
@@ -280,10 +290,9 @@ export default function ReelsScreen() {
         const comment = await response.json();
         setComments(prev => [comment, ...prev]);
         setNewComment('');
-        // Update comment count in reels list
         setReels(prev => prev.map(r => 
           r.reel_id === selectedReel.reel_id 
-            ? { ...r, comments_count: r.comments_count + 1 }
+            ? { ...r, comments_count: (r.comments_count || 0) + 1 }
             : r
         ));
       }
@@ -384,10 +393,11 @@ export default function ReelsScreen() {
         animationType="slide"
         onRequestClose={() => setShowUploadModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowUploadModal(false)}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Create Reel</Text>
-            <Text style={styles.modalSubtitle}>Max 60 seconds • Will be compressed</Text>
+            <Text style={styles.modalSubtitle}>Max 60 seconds • Auto-compressed</Text>
 
             {/* Caption Input */}
             <TextInput
@@ -444,25 +454,27 @@ export default function ReelsScreen() {
               onPress={pickFromGallery}
             >
               <View style={styles.modalOptionIcon}>
-                <Ionicons name="images" size={24} color={COLORS.primary} />
+                <Ionicons name="images" size={28} color={COLORS.primary} />
               </View>
-              <View>
+              <View style={styles.modalOptionInfo}>
                 <Text style={styles.modalOptionTitle}>Choose from Gallery</Text>
                 <Text style={styles.modalOptionSubtitle}>Select a video from your phone</Text>
               </View>
+              <Ionicons name="chevron-forward" size={24} color="#8B7355" />
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.modalOption}
               onPress={recordWithCamera}
             >
-              <View style={styles.modalOptionIcon}>
-                <Ionicons name="videocam" size={24} color={COLORS.primary} />
+              <View style={[styles.modalOptionIcon, { backgroundColor: '#FFEBEE' }]}>
+                <Ionicons name="videocam" size={28} color="#E53935" />
               </View>
-              <View>
+              <View style={styles.modalOptionInfo}>
                 <Text style={styles.modalOptionTitle}>Record Video</Text>
                 <Text style={styles.modalOptionSubtitle}>Use camera to record (max 60s)</Text>
               </View>
+              <Ionicons name="chevron-forward" size={24} color="#8B7355" />
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -471,8 +483,8 @@ export default function ReelsScreen() {
             >
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Comments Modal */}
@@ -486,18 +498,28 @@ export default function ReelsScreen() {
           style={styles.commentsModalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
+          <Pressable 
+            style={styles.commentsBackdrop} 
+            onPress={() => setShowComments(false)} 
+          />
           <View style={styles.commentsModalContent}>
             <View style={styles.commentsHeader}>
+              <View style={styles.commentsHandle} />
               <Text style={styles.commentsTitle}>
-                Comments {selectedReel && `(${selectedReel.comments_count})`}
+                Comments {selectedReel && `(${selectedReel.comments_count || 0})`}
               </Text>
-              <TouchableOpacity onPress={() => setShowComments(false)}>
+              <TouchableOpacity 
+                style={styles.closeCommentsBtn}
+                onPress={() => setShowComments(false)}
+              >
                 <Ionicons name="close" size={24} color="#2D1810" />
               </TouchableOpacity>
             </View>
 
             {loadingComments ? (
-              <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
+              <View style={styles.commentsLoading}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+              </View>
             ) : comments.length === 0 ? (
               <View style={styles.noComments}>
                 <Ionicons name="chatbubble-outline" size={48} color="#8B7355" />
@@ -521,11 +543,16 @@ export default function ReelsScreen() {
                   </View>
                 )}
                 contentContainerStyle={styles.commentsList}
+                showsVerticalScrollIndicator={false}
               />
             )}
 
             {/* Comment Input */}
             <View style={styles.commentInputContainer}>
+              <Image
+                source={{ uri: user?.picture || 'https://via.placeholder.com/36' }}
+                style={styles.myCommentAvatar}
+              />
               <TextInput
                 style={styles.commentInput}
                 placeholder="Add a comment..."
@@ -540,7 +567,7 @@ export default function ReelsScreen() {
                 onPress={postComment}
                 disabled={!newComment.trim()}
               >
-                <Ionicons name="send" size={20} color={COLORS.white} />
+                <Ionicons name="send" size={18} color={COLORS.white} />
               </TouchableOpacity>
             </View>
           </View>
@@ -568,6 +595,7 @@ function ReelItem({
 }) {
   const videoRef = useRef<Video>(null);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [showHeart, setShowHeart] = useState(false);
 
   React.useEffect(() => {
     if (isActive) {
@@ -588,14 +616,22 @@ function ReelItem({
     setIsPlaying(!isPlaying);
   };
 
+  const handleDoubleTap = () => {
+    if (!reel.is_liked) {
+      onLike();
+      setShowHeart(true);
+      setTimeout(() => setShowHeart(false), 800);
+    }
+  };
+
   const videoUrl = `${BACKEND_URL}/api/reels/${reel.reel_id}/video`;
 
   return (
     <View style={styles.reelContainer}>
-      <TouchableOpacity 
+      <Pressable 
         style={styles.videoContainer}
-        activeOpacity={1}
         onPress={togglePlay}
+        onLongPress={handleDoubleTap}
       >
         <Video
           ref={videoRef}
@@ -616,7 +652,14 @@ function ReelItem({
             <Ionicons name="play" size={64} color={COLORS.white} />
           </View>
         )}
-      </TouchableOpacity>
+
+        {/* Double tap heart animation */}
+        {showHeart && (
+          <View style={styles.heartAnimation}>
+            <Ionicons name="heart" size={100} color={COLORS.heart} />
+          </View>
+        )}
+      </Pressable>
 
       {/* Overlay Info */}
       <View style={styles.reelOverlay}>
@@ -635,9 +678,9 @@ function ReelItem({
         </TouchableOpacity>
 
         {/* Caption */}
-        {reel.caption && (
+        {reel.caption ? (
           <Text style={styles.caption} numberOfLines={2}>{reel.caption}</Text>
-        )}
+        ) : null}
       </View>
 
       {/* Action Buttons */}
@@ -649,7 +692,7 @@ function ReelItem({
             size={32} 
             color={reel.is_liked ? COLORS.heart : COLORS.white} 
           />
-          <Text style={styles.actionCount}>{reel.likes_count}</Text>
+          <Text style={styles.actionCount}>{reel.likes_count || 0}</Text>
         </TouchableOpacity>
 
         {/* Comment Button */}
@@ -661,7 +704,7 @@ function ReelItem({
         {/* Views */}
         <View style={styles.actionButton}>
           <Ionicons name="eye-outline" size={28} color={COLORS.white} />
-          <Text style={styles.actionCount}>{reel.views}</Text>
+          <Text style={styles.actionCount}>{reel.views || 0}</Text>
         </View>
       </View>
     </View>
@@ -713,7 +756,7 @@ const styles = StyleSheet.create({
     right: 20,
     backgroundColor: COLORS.primary,
     borderRadius: 12,
-    padding: 12,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -776,6 +819,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
+  heartAnimation: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   reelOverlay: {
     position: 'absolute',
     bottom: 80,
@@ -815,6 +863,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+    lineHeight: 20,
   },
   actionsContainer: {
     position: 'absolute',
@@ -835,17 +884,26 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
+  // Upload Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 40,
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 20,
@@ -863,7 +921,7 @@ const styles = StyleSheet.create({
   captionInput: {
     backgroundColor: '#FFF8F0',
     borderRadius: 12,
-    padding: 12,
+    padding: 14,
     fontSize: 15,
     color: '#2D1810',
     minHeight: 60,
@@ -900,19 +958,22 @@ const styles = StyleSheet.create({
   modalOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 14,
     backgroundColor: '#FFF8F0',
     borderRadius: 16,
     marginBottom: 12,
-    gap: 16,
   },
   modalOptionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: '#FFE4C4',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 14,
+  },
+  modalOptionInfo: {
+    flex: 1,
   },
   modalOptionTitle: {
     fontSize: 16,
@@ -927,18 +988,21 @@ const styles = StyleSheet.create({
   cancelButton: {
     alignItems: 'center',
     padding: 16,
-    marginTop: 8,
+    marginTop: 4,
   },
   cancelText: {
     fontSize: 16,
     color: '#8B7355',
     fontWeight: '500',
   },
-  // Comments Modal Styles
+  // Comments Modal
   commentsModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
+  },
+  commentsBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   commentsModalContent: {
     backgroundColor: '#FFFFFF',
@@ -948,17 +1012,33 @@ const styles = StyleSheet.create({
     minHeight: '50%',
   },
   commentsHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E8DDD4',
   },
+  commentsHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    marginBottom: 12,
+  },
   commentsTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: '#2D1810',
+  },
+  closeCommentsBtn: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
+    padding: 4,
+  },
+  commentsLoading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   commentsList: {
     padding: 16,
@@ -1009,11 +1089,18 @@ const styles = StyleSheet.create({
   },
   commentInputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     padding: 12,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 12,
     borderTopWidth: 1,
     borderTopColor: '#E8DDD4',
     backgroundColor: '#FFFFFF',
+  },
+  myCommentAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 10,
   },
   commentInput: {
     flex: 1,
@@ -1023,16 +1110,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 15,
     color: '#2D1810',
-    maxHeight: 100,
-    marginRight: 8,
+    maxHeight: 80,
   },
   sendCommentBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 8,
   },
   sendCommentBtnDisabled: {
     backgroundColor: '#BCAAA4',
