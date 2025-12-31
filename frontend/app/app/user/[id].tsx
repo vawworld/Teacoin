@@ -27,6 +27,7 @@ const COLORS = {
   border: '#E8DDD4',
   success: '#4CAF50',
   error: '#F44336',
+  warning: '#FF9800',
 };
 
 interface UserProfile {
@@ -43,15 +44,9 @@ interface UserProfile {
   interests?: string[];
 }
 
-interface FollowStatus {
-  i_follow_them: boolean;
-  they_follow_me: boolean;
-  is_mutual: boolean;
-}
-
-interface FollowCounts {
-  followers: number;
-  following: number;
+interface FriendStatus {
+  status: 'friends' | 'request_sent' | 'request_received' | 'none';
+  is_friend: boolean;
 }
 
 export default function UserProfileScreen() {
@@ -61,14 +56,14 @@ export default function UserProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [followStatus, setFollowStatus] = useState<FollowStatus | null>(null);
-  const [followCounts, setFollowCounts] = useState<FollowCounts>({ followers: 0, following: 0 });
+  const [friendStatus, setFriendStatus] = useState<FriendStatus | null>(null);
+  const [friendCount, setFriendCount] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     loadUser();
-    loadFollowStatus();
-    loadFollowCounts();
+    loadFriendStatus();
+    loadFriendCount();
   }, [userId]);
 
   const loadUser = async () => {
@@ -87,60 +82,51 @@ export default function UserProfileScreen() {
     }
   };
 
-  const loadFollowStatus = async () => {
+  const loadFriendStatus = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/follow/status/${userId}`, {
+      const response = await fetch(`${BACKEND_URL}/api/friend/status/${userId}`, {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
 
       if (response.ok) {
-        setFollowStatus(await response.json());
+        setFriendStatus(await response.json());
       }
     } catch (error) {
-      console.error('Error loading follow status:', error);
+      console.error('Error loading friend status:', error);
     }
   };
 
-  const loadFollowCounts = async () => {
+  const loadFriendCount = async () => {
     try {
-      // Get followers of this user
-      const followersRes = await fetch(`${BACKEND_URL}/api/users/${userId}/followers`, {
-        headers: { Authorization: `Bearer ${sessionToken}` },
-      });
-      
-      // Get following of this user
-      const followingRes = await fetch(`${BACKEND_URL}/api/users/${userId}/following`, {
+      const response = await fetch(`${BACKEND_URL}/api/users/${userId}/friends`, {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
 
-      if (followersRes.ok && followingRes.ok) {
-        const followers = await followersRes.json();
-        const following = await followingRes.json();
-        setFollowCounts({
-          followers: followers.length,
-          following: following.length,
-        });
+      if (response.ok) {
+        const friends = await response.json();
+        setFriendCount(friends.length);
       }
     } catch (error) {
-      console.error('Error loading follow counts:', error);
+      console.error('Error loading friend count:', error);
     }
   };
 
-  const handleFollow = async () => {
+  const sendFriendRequest = async () => {
     setActionLoading(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/follow/${userId}`, {
+      const response = await fetch(`${BACKEND_URL}/api/friend-request/${userId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
 
       if (response.ok) {
-        Alert.alert(
-          'Friend Request Sent! 🎉',
-          `You are now following ${user?.name}. They can see your message requests now.`
-        );
-        loadFollowStatus();
-        loadFollowCounts();
+        const data = await response.json();
+        if (data.status === 'accepted') {
+          Alert.alert('🎉 Friends!', `You and ${user?.name} are now friends!`);
+        } else {
+          Alert.alert('Request Sent! 📨', `Friend request sent to ${user?.name}`);
+        }
+        loadFriendStatus();
       } else {
         const error = await response.json();
         Alert.alert('Error', error.detail || 'Failed to send friend request');
@@ -152,23 +138,87 @@ export default function UserProfileScreen() {
     }
   };
 
-  const handleUnfollow = async () => {
+  const acceptFriendRequest = async () => {
     setActionLoading(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/follow/${userId}`, {
+      const response = await fetch(`${BACKEND_URL}/api/friend-request/${userId}/accept`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+
+      if (response.ok) {
+        Alert.alert('🎉 Friends!', `You and ${user?.name} are now friends!`);
+        loadFriendStatus();
+        loadFriendCount();
+      } else {
+        Alert.alert('Error', 'Failed to accept friend request');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to accept friend request');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const declineFriendRequest = async () => {
+    setActionLoading(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/friend-request/${userId}/decline`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+
+      if (response.ok) {
+        Alert.alert('Declined', 'Friend request declined');
+        loadFriendStatus();
+      } else {
+        Alert.alert('Error', 'Failed to decline friend request');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to decline friend request');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const cancelFriendRequest = async () => {
+    setActionLoading(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/friend-request/${userId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
 
       if (response.ok) {
-        Alert.alert('Unfollowed', `You unfollowed ${user?.name}`);
-        loadFollowStatus();
-        loadFollowCounts();
+        Alert.alert('Cancelled', 'Friend request cancelled');
+        loadFriendStatus();
       } else {
-        Alert.alert('Error', 'Failed to unfollow');
+        Alert.alert('Error', 'Failed to cancel friend request');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to unfollow');
+      Alert.alert('Error', 'Failed to cancel friend request');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const unfriend = async () => {
+    setActionLoading(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/friend/${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+
+      if (response.ok) {
+        Alert.alert('Unfriended', `You are no longer friends with ${user?.name}`);
+        loadFriendStatus();
+        loadFriendCount();
+      } else {
+        Alert.alert('Error', 'Failed to unfriend');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to unfriend');
     } finally {
       setActionLoading(false);
     }
@@ -215,6 +265,60 @@ export default function UserProfileScreen() {
 
   const isOwnProfile = currentUser?.user_id === userId;
 
+  const renderFriendButton = () => {
+    if (isOwnProfile || !friendStatus) return null;
+
+    if (actionLoading) {
+      return (
+        <View style={styles.friendButton}>
+          <ActivityIndicator size="small" color={COLORS.white} />
+        </View>
+      );
+    }
+
+    switch (friendStatus.status) {
+      case 'friends':
+        return (
+          <TouchableOpacity style={styles.friendsButton} onPress={unfriend}>
+            <Ionicons name="people" size={20} color={COLORS.success} />
+            <Text style={styles.friendsButtonText}>Friends ✓</Text>
+          </TouchableOpacity>
+        );
+      
+      case 'request_sent':
+        return (
+          <TouchableOpacity style={styles.pendingButton} onPress={cancelFriendRequest}>
+            <Ionicons name="time-outline" size={20} color={COLORS.warning} />
+            <Text style={styles.pendingButtonText}>Request Sent</Text>
+          </TouchableOpacity>
+        );
+      
+      case 'request_received':
+        return (
+          <View style={styles.requestReceivedContainer}>
+            <Text style={styles.requestReceivedText}>Wants to be friends!</Text>
+            <View style={styles.requestActions}>
+              <TouchableOpacity style={styles.acceptButton} onPress={acceptFriendRequest}>
+                <Ionicons name="checkmark" size={20} color={COLORS.white} />
+                <Text style={styles.acceptButtonText}>Accept</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.declineButton} onPress={declineFriendRequest}>
+                <Ionicons name="close" size={20} color={COLORS.error} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+      
+      default:
+        return (
+          <TouchableOpacity style={styles.addFriendButton} onPress={sendFriendRequest}>
+            <Ionicons name="person-add" size={20} color={COLORS.white} />
+            <Text style={styles.addFriendButtonText}>Add Friend</Text>
+          </TouchableOpacity>
+        );
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -247,32 +351,19 @@ export default function UserProfileScreen() {
             </View>
           )}
 
-          {/* Follower/Following Stats */}
+          {/* Friend Count */}
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{followCounts.followers}</Text>
-              <Text style={styles.statLabel}>Followers</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{followCounts.following}</Text>
-              <Text style={styles.statLabel}>Following</Text>
+              <Text style={styles.statNumber}>{friendCount}</Text>
+              <Text style={styles.statLabel}>Friends</Text>
             </View>
           </View>
 
-          {/* Follow Status Badge */}
-          {!isOwnProfile && followStatus && (
-            <View style={styles.followStatusContainer}>
-              {followStatus.is_mutual ? (
-                <View style={styles.mutualBadge}>
-                  <Ionicons name="people" size={16} color={COLORS.success} />
-                  <Text style={styles.mutualText}>Friends</Text>
-                </View>
-              ) : followStatus.they_follow_me ? (
-                <View style={styles.followsYouBadge}>
-                  <Text style={styles.followsYouText}>Follows you</Text>
-                </View>
-              ) : null}
+          {/* Friend Status Badge */}
+          {!isOwnProfile && friendStatus?.is_friend && (
+            <View style={styles.friendBadge}>
+              <Ionicons name="people" size={16} color={COLORS.success} />
+              <Text style={styles.friendBadgeText}>Friends</Text>
             </View>
           )}
         </View>
@@ -280,38 +371,8 @@ export default function UserProfileScreen() {
         {/* Action Buttons */}
         {!isOwnProfile && (
           <View style={styles.actionButtons}>
-            {followStatus?.i_follow_them ? (
-              <TouchableOpacity
-                style={styles.followingButton}
-                onPress={handleUnfollow}
-                disabled={actionLoading}
-              >
-                {actionLoading ? (
-                  <ActivityIndicator size="small" color={COLORS.primary} />
-                ) : (
-                  <>
-                    <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
-                    <Text style={styles.followingButtonText}>Following</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={styles.followButton}
-                onPress={handleFollow}
-                disabled={actionLoading}
-              >
-                {actionLoading ? (
-                  <ActivityIndicator size="small" color={COLORS.white} />
-                ) : (
-                  <>
-                    <Ionicons name="person-add" size={20} color={COLORS.white} />
-                    <Text style={styles.followButtonText}>Send Friend Request</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
-
+            {renderFriendButton()}
+            
             <TouchableOpacity style={styles.messageButton} onPress={startChat}>
               <Ionicons name="chatbubble" size={20} color={COLORS.primary} />
               <Text style={styles.messageButtonText}>Message</Text>
@@ -500,15 +561,7 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
     marginTop: 2,
   },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: COLORS.border,
-  },
-  followStatusContainer: {
-    marginTop: 12,
-  },
-  mutualBadge: {
+  friendBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#E8F5E9',
@@ -516,29 +569,19 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
     gap: 6,
+    marginTop: 12,
   },
-  mutualText: {
+  friendBadgeText: {
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.success,
-  },
-  followsYouBadge: {
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  followsYouText: {
-    fontSize: 13,
-    color: COLORS.textLight,
-    fontWeight: '500',
   },
   actionButtons: {
     flexDirection: 'row',
     gap: 12,
     marginBottom: 20,
   },
-  followButton: {
+  addFriendButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -548,27 +591,90 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     gap: 8,
   },
-  followButtonText: {
+  addFriendButtonText: {
     color: COLORS.white,
     fontSize: 15,
     fontWeight: '600',
   },
-  followingButton: {
+  friendButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.primary,
     paddingVertical: 14,
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    gap: 8,
   },
-  followingButtonText: {
-    color: COLORS.primary,
+  friendsButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 14,
+    borderRadius: 16,
+    gap: 8,
+    borderWidth: 2,
+    borderColor: COLORS.success,
+  },
+  friendsButtonText: {
+    color: COLORS.success,
     fontSize: 15,
     fontWeight: '600',
+  },
+  pendingButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingVertical: 14,
+    borderRadius: 16,
+    gap: 8,
+    borderWidth: 2,
+    borderColor: COLORS.warning,
+  },
+  pendingButtonText: {
+    color: COLORS.warning,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  requestReceivedContainer: {
+    flex: 1,
+  },
+  requestReceivedText: {
+    fontSize: 13,
+    color: COLORS.primary,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  requestActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  acceptButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.success,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6,
+  },
+  acceptButtonText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  declineButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFEBEE',
+    borderRadius: 12,
   },
   messageButton: {
     flex: 1,
