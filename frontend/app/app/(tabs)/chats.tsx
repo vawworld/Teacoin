@@ -94,7 +94,7 @@ export default function ChatsScreen() {
 
   const loadRequestCount = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/message-requests/count`, {
+      const response = await fetch(`${BACKEND_URL}/api/friend-requests/count`, {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
       if (response.ok) {
