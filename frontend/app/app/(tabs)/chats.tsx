@@ -181,9 +181,9 @@ export default function ChatsScreen() {
         <View style={styles.headerActions}>
           <TouchableOpacity 
             style={styles.headerBtn}
-            onPress={() => router.push('/app/message-requests')}
+            onPress={() => router.push('/app/friend-requests')}
           >
-            <Ionicons name="mail-outline" size={22} color={COLORS.primary} />
+            <Ionicons name="person-add-outline" size={22} color={COLORS.primary} />
             {requestCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{requestCount}</Text>
