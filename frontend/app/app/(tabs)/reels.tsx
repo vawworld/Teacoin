@@ -11,6 +11,8 @@ import {
   Modal,
   Alert,
   Platform,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -35,6 +37,15 @@ const COLORS = {
   heart: '#FF4458',
 };
 
+interface Comment {
+  comment_id: string;
+  user_id: string;
+  user_name: string;
+  user_picture?: string;
+  content: string;
+  created_at: string;
+}
+
 interface Reel {
   reel_id: string;
   user_id: string;
@@ -48,6 +59,7 @@ interface Reel {
   likes_count: number;
   is_liked: boolean;
   views: number;
+  comments_count: number;
   created_at: string;
 }
 
@@ -61,6 +73,12 @@ export default function ReelsScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [visibility, setVisibility] = useState<'public' | 'friends'>('public');
+  const [caption, setCaption] = useState('');
+  const [showComments, setShowComments] = useState(false);
+  const [selectedReel, setSelectedReel] = useState<Reel | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   useFocusEffect(
@@ -87,59 +105,66 @@ export default function ReelsScreen() {
     }
   };
 
-  const pickVideo = async (useCamera: boolean) => {
+  const pickFromGallery = async () => {
     try {
-      // Request permissions
-      if (useCamera) {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission needed', 'Please allow camera access to record videos');
-          return;
-        }
-      } else {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission needed', 'Please allow media library access to upload videos');
-          return;
-        }
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow media library access to upload videos');
+        return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['videos'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsEditing: true,
         videoMaxDuration: 60,
         quality: 0.8,
       });
 
-      if (useCamera) {
-        const cameraResult = await ImagePicker.launchCameraAsync({
-          mediaTypes: ['videos'],
-          allowsEditing: true,
-          videoMaxDuration: 60,
-          quality: 0.8,
-        });
-        
-        if (!cameraResult.canceled && cameraResult.assets[0]) {
-          uploadVideo(cameraResult.assets[0].uri);
-        }
-      } else {
-        if (!result.canceled && result.assets[0]) {
-          uploadVideo(result.assets[0].uri);
-        }
+      console.log('Gallery result:', result);
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setShowUploadModal(false);
+        uploadVideo(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('Error picking video:', error);
-      Alert.alert('Error', 'Failed to select video');
+      console.error('Error picking from gallery:', error);
+      Alert.alert('Error', 'Failed to select video from gallery');
+    }
+  };
+
+  const recordWithCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow camera access to record videos');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        allowsEditing: true,
+        videoMaxDuration: 60,
+        quality: 0.8,
+        videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
+      });
+
+      console.log('Camera result:', result);
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setShowUploadModal(false);
+        uploadVideo(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error recording:', error);
+      Alert.alert('Error', 'Failed to record video');
     }
   };
 
   const uploadVideo = async (videoUri: string) => {
-    setShowUploadModal(false);
     setUploading(true);
     setUploadProgress('Preparing video...');
 
     try {
-      // Create form data
       const formData = new FormData();
       
       const filename = videoUri.split('/').pop() || 'video.mp4';
@@ -147,31 +172,37 @@ export default function ReelsScreen() {
       const type = match ? `video/${match[1]}` : 'video/mp4';
       
       formData.append('file', {
-        uri: videoUri,
+        uri: Platform.OS === 'ios' ? videoUri.replace('file://', '') : videoUri,
         name: filename,
         type: type,
       } as any);
       
       formData.append('visibility', visibility);
-      formData.append('caption', '');
+      formData.append('caption', caption);
 
       setUploadProgress('Uploading & compressing...');
+      console.log('Starting upload to:', `${BACKEND_URL}/api/reels/upload`);
 
       const response = await fetch(`${BACKEND_URL}/api/reels/upload`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${sessionToken}`,
+          'Content-Type': 'multipart/form-data',
         },
         body: formData,
       });
 
+      console.log('Upload response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
         Alert.alert('Success! 🎬', 'Your reel has been uploaded!');
+        setCaption('');
         loadReels();
       } else {
-        const error = await response.json();
-        Alert.alert('Upload Failed', error.detail || 'Failed to upload video');
+        const errorText = await response.text();
+        console.error('Upload error response:', errorText);
+        Alert.alert('Upload Failed', 'Failed to upload video. Please try again.');
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -206,6 +237,59 @@ export default function ReelsScreen() {
     }
   };
 
+  const openComments = async (reel: Reel) => {
+    setSelectedReel(reel);
+    setShowComments(true);
+    loadComments(reel.reel_id);
+  };
+
+  const loadComments = async (reelId: string) => {
+    setLoadingComments(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/reels/${reelId}/comments`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setComments(data);
+      }
+    } catch (error) {
+      console.error('Error loading comments:', error);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const postComment = async () => {
+    if (!newComment.trim() || !selectedReel) return;
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/reels/${selectedReel.reel_id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ content: newComment.trim() }),
+      });
+
+      if (response.ok) {
+        const comment = await response.json();
+        setComments(prev => [comment, ...prev]);
+        setNewComment('');
+        // Update comment count in reels list
+        setReels(prev => prev.map(r => 
+          r.reel_id === selectedReel.reel_id 
+            ? { ...r, comments_count: r.comments_count + 1 }
+            : r
+        ));
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error);
+    }
+  };
+
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
       setCurrentIndex(viewableItems[0].index || 0);
@@ -221,6 +305,7 @@ export default function ReelsScreen() {
       reel={item}
       isActive={index === currentIndex}
       onLike={() => handleLike(item.reel_id)}
+      onComment={() => openComments(item)}
       onUserPress={() => router.push(`/app/user/${item.user_id}`)}
       sessionToken={sessionToken}
     />
@@ -302,6 +387,17 @@ export default function ReelsScreen() {
             <Text style={styles.modalTitle}>Create Reel</Text>
             <Text style={styles.modalSubtitle}>Max 60 seconds • Will be compressed</Text>
 
+            {/* Caption Input */}
+            <TextInput
+              style={styles.captionInput}
+              placeholder="Add a caption..."
+              placeholderTextColor="#8B7355"
+              value={caption}
+              onChangeText={setCaption}
+              multiline
+              maxLength={200}
+            />
+
             {/* Visibility Options */}
             <View style={styles.visibilityOptions}>
               <TouchableOpacity
@@ -343,7 +439,7 @@ export default function ReelsScreen() {
 
             <TouchableOpacity 
               style={styles.modalOption}
-              onPress={() => pickVideo(false)}
+              onPress={pickFromGallery}
             >
               <View style={styles.modalOptionIcon}>
                 <Ionicons name="images" size={24} color={COLORS.primary} />
@@ -356,7 +452,7 @@ export default function ReelsScreen() {
 
             <TouchableOpacity 
               style={styles.modalOption}
-              onPress={() => pickVideo(true)}
+              onPress={recordWithCamera}
             >
               <View style={styles.modalOptionIcon}>
                 <Ionicons name="videocam" size={24} color={COLORS.primary} />
@@ -376,6 +472,78 @@ export default function ReelsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Comments Modal */}
+      <Modal
+        visible={showComments}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowComments(false)}
+      >
+        <KeyboardAvoidingView 
+          style={styles.commentsModalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.commentsModalContent}>
+            <View style={styles.commentsHeader}>
+              <Text style={styles.commentsTitle}>
+                Comments {selectedReel && `(${selectedReel.comments_count})`}
+              </Text>
+              <TouchableOpacity onPress={() => setShowComments(false)}>
+                <Ionicons name="close" size={24} color="#2D1810" />
+              </TouchableOpacity>
+            </View>
+
+            {loadingComments ? (
+              <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
+            ) : comments.length === 0 ? (
+              <View style={styles.noComments}>
+                <Ionicons name="chatbubble-outline" size={48} color="#8B7355" />
+                <Text style={styles.noCommentsText}>No comments yet</Text>
+                <Text style={styles.noCommentsSubtext}>Be the first to comment!</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={comments}
+                keyExtractor={(item) => item.comment_id}
+                renderItem={({ item }) => (
+                  <View style={styles.commentItem}>
+                    <Image
+                      source={{ uri: item.user_picture || 'https://via.placeholder.com/40' }}
+                      style={styles.commentAvatar}
+                    />
+                    <View style={styles.commentContent}>
+                      <Text style={styles.commentUserName}>{item.user_name}</Text>
+                      <Text style={styles.commentText}>{item.content}</Text>
+                    </View>
+                  </View>
+                )}
+                contentContainerStyle={styles.commentsList}
+              />
+            )}
+
+            {/* Comment Input */}
+            <View style={styles.commentInputContainer}>
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Add a comment..."
+                placeholderTextColor="#8B7355"
+                value={newComment}
+                onChangeText={setNewComment}
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity 
+                style={[styles.sendCommentBtn, !newComment.trim() && styles.sendCommentBtnDisabled]}
+                onPress={postComment}
+                disabled={!newComment.trim()}
+              >
+                <Ionicons name="send" size={20} color={COLORS.white} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -385,12 +553,14 @@ function ReelItem({
   reel, 
   isActive, 
   onLike, 
+  onComment,
   onUserPress,
   sessionToken 
 }: { 
   reel: Reel; 
   isActive: boolean; 
   onLike: () => void;
+  onComment: () => void;
   onUserPress: () => void;
   sessionToken: string | null;
 }) {
@@ -470,6 +640,7 @@ function ReelItem({
 
       {/* Action Buttons */}
       <View style={styles.actionsContainer}>
+        {/* Like Button - Heart Icon */}
         <TouchableOpacity style={styles.actionButton} onPress={onLike}>
           <Ionicons 
             name={reel.is_liked ? "heart" : "heart-outline"} 
@@ -479,6 +650,13 @@ function ReelItem({
           <Text style={styles.actionCount}>{reel.likes_count}</Text>
         </TouchableOpacity>
 
+        {/* Comment Button */}
+        <TouchableOpacity style={styles.actionButton} onPress={onComment}>
+          <Ionicons name="chatbubble-outline" size={28} color={COLORS.white} />
+          <Text style={styles.actionCount}>{reel.comments_count || 0}</Text>
+        </TouchableOpacity>
+
+        {/* Views */}
         <View style={styles.actionButton}>
           <Ionicons name="eye-outline" size={28} color={COLORS.white} />
           <Text style={styles.actionCount}>{reel.views}</Text>
@@ -678,7 +856,17 @@ const styles = StyleSheet.create({
     color: '#8B7355',
     textAlign: 'center',
     marginTop: 4,
-    marginBottom: 20,
+    marginBottom: 16,
+  },
+  captionInput: {
+    backgroundColor: '#FFF8F0',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 15,
+    color: '#2D1810',
+    minHeight: 60,
+    marginBottom: 16,
+    textAlignVertical: 'top',
   },
   visibilityOptions: {
     flexDirection: 'row',
@@ -743,5 +931,108 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8B7355',
     fontWeight: '500',
+  },
+  // Comments Modal Styles
+  commentsModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  commentsModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '70%',
+    minHeight: '50%',
+  },
+  commentsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8DDD4',
+  },
+  commentsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2D1810',
+  },
+  commentsList: {
+    padding: 16,
+  },
+  commentItem: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  commentAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  commentContent: {
+    flex: 1,
+    backgroundColor: '#FFF8F0',
+    borderRadius: 16,
+    padding: 12,
+  },
+  commentUserName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2D1810',
+    marginBottom: 4,
+  },
+  commentText: {
+    fontSize: 14,
+    color: '#3E2723',
+    lineHeight: 20,
+  },
+  noComments: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noCommentsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8B7355',
+    marginTop: 12,
+  },
+  noCommentsSubtext: {
+    fontSize: 14,
+    color: '#8B7355',
+    marginTop: 4,
+  },
+  commentInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E8DDD4',
+    backgroundColor: '#FFFFFF',
+  },
+  commentInput: {
+    flex: 1,
+    backgroundColor: '#FFF8F0',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#2D1810',
+    maxHeight: 100,
+    marginRight: 8,
+  },
+  sendCommentBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendCommentBtnDisabled: {
+    backgroundColor: '#BCAAA4',
   },
 });
