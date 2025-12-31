@@ -59,6 +59,7 @@ export default function ProfileScreen() {
   const [sellerRequests, setSellerRequests] = useState<SellerRequest[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [followCounts, setFollowCounts] = useState<FollowCounts>({ followers: 0, following: 0 });
+  const [friendRequestCount, setFriendRequestCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -68,17 +69,17 @@ export default function ProfileScreen() {
 
   const loadData = async () => {
     try {
-      const [walletRes, requestsRes, followersRes, followingRes] = await Promise.all([
+      const [walletRes, requestsRes, friendsRes, friendReqCountRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/wallet`, {
           headers: { Authorization: `Bearer ${sessionToken}` },
         }),
         fetch(`${BACKEND_URL}/api/admin/seller-requests`, {
           headers: { Authorization: `Bearer ${sessionToken}` },
         }),
-        fetch(`${BACKEND_URL}/api/followers`, {
+        fetch(`${BACKEND_URL}/api/friends`, {
           headers: { Authorization: `Bearer ${sessionToken}` },
         }),
-        fetch(`${BACKEND_URL}/api/following`, {
+        fetch(`${BACKEND_URL}/api/friend-requests/count`, {
           headers: { Authorization: `Bearer ${sessionToken}` },
         }),
       ]);
@@ -86,13 +87,17 @@ export default function ProfileScreen() {
       if (walletRes.ok) setWallet(await walletRes.json());
       if (requestsRes.ok) setSellerRequests(await requestsRes.json());
       
-      if (followersRes.ok && followingRes.ok) {
-        const followers = await followersRes.json();
-        const following = await followingRes.json();
+      if (friendsRes.ok) {
+        const friends = await friendsRes.json();
         setFollowCounts({
-          followers: followers.length,
-          following: following.length,
+          followers: friends.length,
+          following: friends.length,
         });
+      }
+      
+      if (friendReqCountRes.ok) {
+        const data = await friendReqCountRes.json();
+        setFriendRequestCount(data.count);
       }
     } catch (error) {
       console.error('Error loading data:', error);
