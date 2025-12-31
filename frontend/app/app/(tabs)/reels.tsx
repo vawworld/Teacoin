@@ -20,7 +20,6 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
 import Constants from 'expo-constants';
 
 const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
@@ -106,27 +105,20 @@ export default function ReelsScreen() {
 
   const pickFromGallery = async () => {
     console.log('=== GALLERY PICKER STARTED ===');
-    Alert.alert('Opening Gallery', 'Requesting permission...');
     
     try {
-      // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       console.log('Gallery permission status:', status);
       
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Denied', 
-          'Please allow access to your photo library in Settings to upload videos.'
-        );
+        Alert.alert('Permission Denied', 'Please allow access to your photo library.');
         return;
       }
 
-      Alert.alert('Permission Granted', 'Opening gallery...');
       setShowUploadModal(false);
 
-      // Launch picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: ['videos'],
         allowsEditing: true,
         quality: 0.7,
         videoMaxDuration: 60,
@@ -135,47 +127,37 @@ export default function ReelsScreen() {
       console.log('Gallery result:', JSON.stringify(result, null, 2));
 
       if (result.canceled) {
-        Alert.alert('Cancelled', 'Video selection was cancelled');
+        console.log('User cancelled gallery picker');
         return;
       }
 
       if (result.assets && result.assets.length > 0) {
-        const videoUri = result.assets[0].uri;
-        console.log('Selected video URI:', videoUri);
-        Alert.alert('Video Selected', `URI: ${videoUri.substring(0, 50)}...`);
-        await uploadVideo(videoUri);
-      } else {
-        Alert.alert('Error', 'No video was selected');
+        const asset = result.assets[0];
+        console.log('Selected video:', asset.uri);
+        await uploadVideo(asset.uri, asset.fileName || 'video.mp4', asset.fileSize);
       }
     } catch (error: any) {
       console.error('Gallery picker error:', error);
-      Alert.alert('Gallery Error', error.message || 'Failed to open gallery');
+      Alert.alert('Error', error.message || 'Failed to open gallery');
     }
   };
 
   const recordWithCamera = async () => {
     console.log('=== CAMERA RECORDER STARTED ===');
-    Alert.alert('Opening Camera', 'Requesting permission...');
     
     try {
-      // Request camera permission
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       console.log('Camera permission status:', status);
       
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Denied', 
-          'Please allow camera access in Settings to record videos.'
-        );
+        Alert.alert('Permission Denied', 'Please allow camera access.');
         return;
       }
 
-      Alert.alert('Permission Granted', 'Opening camera...');
       setShowUploadModal(false);
 
-      // Launch camera
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: ['videos'],
         allowsEditing: true,
         quality: 0.7,
         videoMaxDuration: 60,
@@ -184,71 +166,78 @@ export default function ReelsScreen() {
       console.log('Camera result:', JSON.stringify(result, null, 2));
 
       if (result.canceled) {
-        Alert.alert('Cancelled', 'Recording was cancelled');
+        console.log('User cancelled camera');
         return;
       }
 
       if (result.assets && result.assets.length > 0) {
-        const videoUri = result.assets[0].uri;
-        console.log('Recorded video URI:', videoUri);
-        Alert.alert('Video Recorded', `URI: ${videoUri.substring(0, 50)}...`);
-        await uploadVideo(videoUri);
-      } else {
-        Alert.alert('Error', 'No video was recorded');
+        const asset = result.assets[0];
+        console.log('Recorded video:', asset.uri);
+        await uploadVideo(asset.uri, asset.fileName || 'video.mp4', asset.fileSize);
       }
     } catch (error: any) {
       console.error('Camera error:', error);
-      Alert.alert('Camera Error', error.message || 'Failed to open camera');
+      Alert.alert('Error', error.message || 'Failed to open camera');
     }
   };
 
-  const uploadVideo = async (videoUri: string) => {
+  const uploadVideo = async (videoUri: string, fileName: string = 'video.mp4', fileSize?: number) => {
     console.log('=== UPLOAD STARTED ===');
     console.log('Video URI:', videoUri);
+    console.log('Platform:', Platform.OS);
     
     setUploading(true);
-    setUploadProgress('Checking file...');
+    setUploadProgress('Preparing upload...');
 
     try {
-      // Check if file exists
-      const fileInfo = await FileSystem.getInfoAsync(videoUri);
-      console.log('File info:', JSON.stringify(fileInfo, null, 2));
+      const formData = new FormData();
 
-      if (!fileInfo.exists) {
-        Alert.alert('Error', 'Video file not found');
-        setUploading(false);
-        return;
+      // Handle both web (blob URL) and mobile (file URI)
+      if (Platform.OS === 'web') {
+        // For web: fetch the blob and append it
+        console.log('Web platform - fetching blob...');
+        setUploadProgress('Fetching video...');
+        
+        const response = await fetch(videoUri);
+        const blob = await response.blob();
+        
+        console.log('Blob size:', blob.size);
+        const fileSizeMB = blob.size / (1024 * 1024);
+        setUploadProgress(`Uploading (${fileSizeMB.toFixed(1)} MB)...`);
+        
+        formData.append('file', blob, fileName);
+      } else {
+        // For mobile: use the file URI directly
+        console.log('Mobile platform - using file URI...');
+        const fileSizeMB = (fileSize || 0) / (1024 * 1024);
+        setUploadProgress(`Uploading (${fileSizeMB.toFixed(1)} MB)...`);
+        
+        formData.append('file', {
+          uri: videoUri,
+          name: fileName,
+          type: 'video/mp4',
+        } as any);
       }
 
-      const fileSizeMB = (fileInfo.size || 0) / (1024 * 1024);
-      setUploadProgress(`Uploading (${fileSizeMB.toFixed(1)} MB)...`);
-      Alert.alert('Uploading', `File size: ${fileSizeMB.toFixed(1)} MB. This may take a moment...`);
+      formData.append('visibility', visibility);
+      formData.append('caption', caption || '');
 
-      console.log('Starting upload to:', `${BACKEND_URL}/api/reels/upload`);
-      console.log('Session token:', sessionToken ? 'Present' : 'Missing');
+      console.log('Sending to:', `${BACKEND_URL}/api/reels/upload`);
 
-      // Upload using FileSystem.uploadAsync
-      const uploadResult = await FileSystem.uploadAsync(
-        `${BACKEND_URL}/api/reels/upload`,
-        videoUri,
-        {
-          httpMethod: 'POST',
-          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-          fieldName: 'file',
-          parameters: {
-            visibility: visibility,
-            caption: caption || '',
-          },
-          headers: {
-            Authorization: `Bearer ${sessionToken}`,
-          },
-        }
-      );
+      const uploadResponse = await fetch(`${BACKEND_URL}/api/reels/upload`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${sessionToken}`,
+          // Don't set Content-Type for FormData - browser will set it with boundary
+        },
+        body: formData,
+      });
 
-      console.log('Upload response status:', uploadResult.status);
-      console.log('Upload response body:', uploadResult.body);
+      console.log('Upload response status:', uploadResponse.status);
+      const responseText = await uploadResponse.text();
+      console.log('Upload response:', responseText);
 
-      if (uploadResult.status === 200 || uploadResult.status === 201) {
+      if (uploadResponse.ok) {
         Alert.alert('Success! 🎬', 'Your reel has been uploaded!');
         setCaption('');
         setVisibility('public');
@@ -256,10 +245,16 @@ export default function ReelsScreen() {
       } else {
         let errorMsg = 'Upload failed';
         try {
-          const errorData = JSON.parse(uploadResult.body);
-          errorMsg = JSON.stringify(errorData.detail || errorData, null, 2);
+          const errorData = JSON.parse(responseText);
+          if (errorData.detail) {
+            if (Array.isArray(errorData.detail)) {
+              errorMsg = errorData.detail.map((e: any) => e.msg || e).join('\n');
+            } else {
+              errorMsg = JSON.stringify(errorData.detail);
+            }
+          }
         } catch (e) {
-          errorMsg = uploadResult.body || 'Unknown error';
+          errorMsg = responseText || 'Unknown error';
         }
         Alert.alert('Upload Failed', errorMsg);
       }
@@ -283,11 +278,7 @@ export default function ReelsScreen() {
         const data = await response.json();
         setReels(prev => prev.map(r => 
           r.reel_id === reelId 
-            ? { 
-                ...r, 
-                is_liked: data.liked, 
-                likes_count: data.liked ? r.likes_count + 1 : r.likes_count - 1 
-              }
+            ? { ...r, is_liked: data.liked, likes_count: data.liked ? r.likes_count + 1 : r.likes_count - 1 }
             : r
         ));
       }
@@ -308,7 +299,6 @@ export default function ReelsScreen() {
       const response = await fetch(`${BACKEND_URL}/api/reels/${reelId}/comments`, {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
-
       if (response.ok) {
         setComments(await response.json());
       }
@@ -353,9 +343,7 @@ export default function ReelsScreen() {
     }
   }).current;
 
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 50,
-  }).current;
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
 
   const renderReel = ({ item, index }: { item: Reel; index: number }) => (
     <ReelItem
@@ -409,10 +397,7 @@ export default function ReelsScreen() {
           <Ionicons name="videocam-outline" size={64} color={COLORS.textLight} />
           <Text style={styles.emptyText}>No reels yet</Text>
           <Text style={styles.emptySubtext}>Be the first to share a reel!</Text>
-          <TouchableOpacity 
-            style={styles.createButton}
-            onPress={() => setShowUploadModal(true)}
-          >
+          <TouchableOpacity style={styles.createButton} onPress={() => setShowUploadModal(true)}>
             <Ionicons name="add" size={20} color={COLORS.white} />
             <Text style={styles.createButtonText}>Create Reel</Text>
           </TouchableOpacity>
@@ -433,19 +418,13 @@ export default function ReelsScreen() {
       )}
 
       {/* Upload Modal */}
-      <Modal
-        visible={showUploadModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowUploadModal(false)}
-      >
+      <Modal visible={showUploadModal} transparent animationType="slide" onRequestClose={() => setShowUploadModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Create Reel</Text>
             <Text style={styles.modalSubtitle}>Max 60 seconds</Text>
 
-            {/* Caption */}
             <TextInput
               style={styles.captionInput}
               placeholder="Add a caption..."
@@ -456,7 +435,6 @@ export default function ReelsScreen() {
               maxLength={200}
             />
 
-            {/* Visibility */}
             <View style={styles.visibilityRow}>
               <TouchableOpacity
                 style={[styles.visibilityBtn, visibility === 'public' && styles.visibilityBtnActive]}
@@ -474,7 +452,6 @@ export default function ReelsScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Gallery Option */}
             <TouchableOpacity style={styles.optionBtn} onPress={pickFromGallery}>
               <View style={[styles.optionIcon, { backgroundColor: '#E3F2FD' }]}>
                 <Ionicons name="images" size={28} color="#1976D2" />
@@ -486,7 +463,6 @@ export default function ReelsScreen() {
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </TouchableOpacity>
 
-            {/* Camera Option */}
             <TouchableOpacity style={styles.optionBtn} onPress={recordWithCamera}>
               <View style={[styles.optionIcon, { backgroundColor: '#FFEBEE' }]}>
                 <Ionicons name="videocam" size={28} color="#E53935" />
@@ -506,16 +482,8 @@ export default function ReelsScreen() {
       </Modal>
 
       {/* Comments Modal */}
-      <Modal
-        visible={showComments}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowComments(false)}
-      >
-        <KeyboardAvoidingView 
-          style={styles.commentsOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
+      <Modal visible={showComments} transparent animationType="slide" onRequestClose={() => setShowComments(false)}>
+        <KeyboardAvoidingView style={styles.commentsOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <Pressable style={styles.commentsBackdrop} onPress={() => setShowComments(false)} />
           <View style={styles.commentsContent}>
             <View style={styles.commentsHeader}>
@@ -538,10 +506,7 @@ export default function ReelsScreen() {
                 keyExtractor={(item) => item.comment_id}
                 renderItem={({ item }) => (
                   <View style={styles.commentItem}>
-                    <Image
-                      source={{ uri: item.user_picture || 'https://via.placeholder.com/40' }}
-                      style={styles.commentAvatar}
-                    />
+                    <Image source={{ uri: item.user_picture || 'https://via.placeholder.com/40' }} style={styles.commentAvatar} />
                     <View style={styles.commentBody}>
                       <Text style={styles.commentName}>{item.user_name}</Text>
                       <Text style={styles.commentText}>{item.content}</Text>
@@ -618,26 +583,17 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, sessionToken
         )}
       </Pressable>
 
-      {/* User Info */}
       <View style={styles.reelInfo}>
         <TouchableOpacity style={styles.userRow} onPress={onUserPress}>
-          <Image
-            source={{ uri: reel.user_picture || 'https://via.placeholder.com/40' }}
-            style={styles.userAvatar}
-          />
+          <Image source={{ uri: reel.user_picture || 'https://via.placeholder.com/40' }} style={styles.userAvatar} />
           <Text style={styles.userName}>{reel.user_name}</Text>
         </TouchableOpacity>
         {reel.caption ? <Text style={styles.caption}>{reel.caption}</Text> : null}
       </View>
 
-      {/* Actions */}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.actionBtn} onPress={onLike}>
-          <Ionicons 
-            name={reel.is_liked ? "heart" : "heart-outline"} 
-            size={30} 
-            color={reel.is_liked ? COLORS.heart : "#FFF"} 
-          />
+          <Ionicons name={reel.is_liked ? "heart" : "heart-outline"} size={30} color={reel.is_liked ? COLORS.heart : "#FFF"} />
           <Text style={styles.actionText}>{reel.likes_count || 0}</Text>
         </TouchableOpacity>
 
@@ -682,7 +638,6 @@ const styles = StyleSheet.create({
   },
   createButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   
-  // Reel Item
   reelContainer: { height: SCREEN_HEIGHT - 150, width: SCREEN_WIDTH, position: 'relative' },
   videoWrapper: { flex: 1 },
   video: { flex: 1, backgroundColor: '#000' },
@@ -696,7 +651,6 @@ const styles = StyleSheet.create({
   actionBtn: { alignItems: 'center' },
   actionText: { color: '#FFF', fontSize: 13, fontWeight: '600', marginTop: 4 },
 
-  // Upload Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 40 },
   modalHandle: { width: 40, height: 4, backgroundColor: '#DDD', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
@@ -716,7 +670,6 @@ const styles = StyleSheet.create({
   cancelBtn: { alignItems: 'center', padding: 16, marginTop: 8 },
   cancelText: { fontSize: 16, color: '#999', fontWeight: '500' },
 
-  // Comments Modal
   commentsOverlay: { flex: 1, justifyContent: 'flex-end' },
   commentsBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
   commentsContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '70%', minHeight: '50%' },
