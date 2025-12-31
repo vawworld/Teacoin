@@ -1929,6 +1929,340 @@ async def typing(sid, data):
                 "is_typing": is_typing
             }, room=user_sockets[participant_id])
 
+# ==================== REELS SYSTEM ====================
+
+import subprocess
+import shutil
+import tempfile
+import base64
+
+# Reels storage directory
+REELS_DIR = ROOT_DIR / "reels"
+REELS_DIR.mkdir(exist_ok=True)
+
+# Max video duration in seconds
+MAX_VIDEO_DURATION = 60
+
+class ReelCreate(BaseModel):
+    visibility: Literal["public", "friends"] = "public"
+    caption: str = ""
+
+@api_router.post("/reels/upload")
+async def upload_reel(
+    file: UploadFile = File(...),
+    visibility: str = "public",
+    caption: str = "",
+    current_user: User = Depends(require_auth)
+):
+    """Upload and compress a video reel (max 60 seconds)"""
+    
+    # Validate file type
+    if not file.content_type or not file.content_type.startswith("video/"):
+        raise HTTPException(status_code=400, detail="Only video files are allowed")
+    
+    reel_id = f"reel_{uuid.uuid4().hex[:12]}"
+    
+    try:
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_input:
+            content = await file.read()
+            temp_input.write(content)
+            temp_input_path = temp_input.name
+        
+        # Output paths
+        output_filename = f"{reel_id}.mp4"
+        output_path = REELS_DIR / output_filename
+        thumbnail_filename = f"{reel_id}_thumb.jpg"
+        thumbnail_path = REELS_DIR / thumbnail_filename
+        
+        # FFmpeg compression command (Handbrake-like quality)
+        # - Scale to 720p max width
+        # - H.264 codec with CRF 28 (good compression)
+        # - AAC audio at 128k
+        # - Max 60 seconds
+        compress_cmd = [
+            "ffmpeg", "-y",
+            "-i", temp_input_path,
+            "-t", str(MAX_VIDEO_DURATION),  # Limit to 60 seconds
+            "-vf", "scale='min(720,iw)':-2",  # Max 720p width
+            "-c:v", "libx264",
+            "-preset", "medium",
+            "-crf", "28",  # Quality (lower = better, 28 is good for mobile)
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-movflags", "+faststart",  # Enable streaming
+            str(output_path)
+        ]
+        
+        # Run compression
+        result = subprocess.run(compress_cmd, capture_output=True, text=True, timeout=120)
+        
+        if result.returncode != 0:
+            raise HTTPException(status_code=500, detail=f"Video compression failed: {result.stderr[:200]}")
+        
+        # Generate thumbnail
+        thumb_cmd = [
+            "ffmpeg", "-y",
+            "-i", str(output_path),
+            "-ss", "00:00:01",  # 1 second in
+            "-vframes", "1",
+            "-vf", "scale=360:-2",
+            str(thumbnail_path)
+        ]
+        subprocess.run(thumb_cmd, capture_output=True, timeout=30)
+        
+        # Get video duration
+        duration_cmd = [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            str(output_path)
+        ]
+        duration_result = subprocess.run(duration_cmd, capture_output=True, text=True)
+        duration = float(duration_result.stdout.strip()) if duration_result.stdout.strip() else 0
+        
+        # Get file size
+        file_size = output_path.stat().st_size
+        
+        # Clean up temp file
+        os.unlink(temp_input_path)
+        
+        # Save reel metadata to database
+        reel_data = {
+            "reel_id": reel_id,
+            "user_id": current_user.user_id,
+            "user_name": current_user.name,
+            "user_picture": current_user.picture,
+            "video_filename": output_filename,
+            "thumbnail_filename": thumbnail_filename,
+            "caption": caption,
+            "visibility": visibility,  # "public" or "friends"
+            "duration": duration,
+            "file_size": file_size,
+            "likes": [],
+            "comments_count": 0,
+            "views": 0,
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        await db.reels.insert_one(reel_data.copy())
+        reel_data["created_at"] = reel_data["created_at"].isoformat()
+        
+        return {
+            "message": "Reel uploaded successfully",
+            "reel": reel_data
+        }
+        
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail="Video processing timed out")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+@api_router.get("/reels")
+async def get_reels(
+    page: int = 1,
+    limit: int = 10,
+    current_user: User = Depends(require_auth)
+):
+    """Get reels feed (public + friends' reels)"""
+    skip = (page - 1) * limit
+    
+    # Get user's friends
+    friendships = await db.friendships.find({
+        "$or": [
+            {"user1_id": current_user.user_id},
+            {"user2_id": current_user.user_id}
+        ]
+    }).to_list(1000)
+    
+    friend_ids = []
+    for f in friendships:
+        if f["user1_id"] == current_user.user_id:
+            friend_ids.append(f["user2_id"])
+        else:
+            friend_ids.append(f["user1_id"])
+    
+    # Get reels: public OR from friends OR own
+    reels = await db.reels.find({
+        "$or": [
+            {"visibility": "public"},
+            {"user_id": {"$in": friend_ids}},
+            {"user_id": current_user.user_id}
+        ]
+    }, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Convert dates and add user liked status
+    for reel in reels:
+        if "created_at" in reel and reel["created_at"]:
+            reel["created_at"] = reel["created_at"].isoformat()
+        reel["is_liked"] = current_user.user_id in reel.get("likes", [])
+        reel["likes_count"] = len(reel.get("likes", []))
+    
+    return reels
+
+@api_router.get("/reels/my")
+async def get_my_reels(current_user: User = Depends(require_auth)):
+    """Get my uploaded reels"""
+    reels = await db.reels.find(
+        {"user_id": current_user.user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    for reel in reels:
+        if "created_at" in reel and reel["created_at"]:
+            reel["created_at"] = reel["created_at"].isoformat()
+        reel["is_liked"] = current_user.user_id in reel.get("likes", [])
+        reel["likes_count"] = len(reel.get("likes", []))
+    
+    return reels
+
+@api_router.get("/reels/user/{user_id}")
+async def get_user_reels(
+    user_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Get a user's reels (respects visibility)"""
+    # Check if we're friends
+    is_friend = await db.friendships.find_one({
+        "$or": [
+            {"user1_id": current_user.user_id, "user2_id": user_id},
+            {"user1_id": user_id, "user2_id": current_user.user_id}
+        ]
+    })
+    
+    query = {"user_id": user_id}
+    if user_id != current_user.user_id and not is_friend:
+        query["visibility"] = "public"
+    
+    reels = await db.reels.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    for reel in reels:
+        if "created_at" in reel and reel["created_at"]:
+            reel["created_at"] = reel["created_at"].isoformat()
+        reel["is_liked"] = current_user.user_id in reel.get("likes", [])
+        reel["likes_count"] = len(reel.get("likes", []))
+    
+    return reels
+
+@api_router.get("/reels/{reel_id}")
+async def get_reel(
+    reel_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Get a single reel"""
+    reel = await db.reels.find_one({"reel_id": reel_id}, {"_id": 0})
+    
+    if not reel:
+        raise HTTPException(status_code=404, detail="Reel not found")
+    
+    # Check visibility
+    if reel["visibility"] == "friends" and reel["user_id"] != current_user.user_id:
+        is_friend = await db.friendships.find_one({
+            "$or": [
+                {"user1_id": current_user.user_id, "user2_id": reel["user_id"]},
+                {"user1_id": reel["user_id"], "user2_id": current_user.user_id}
+            ]
+        })
+        if not is_friend:
+            raise HTTPException(status_code=403, detail="This reel is only visible to friends")
+    
+    # Increment views
+    await db.reels.update_one(
+        {"reel_id": reel_id},
+        {"$inc": {"views": 1}}
+    )
+    
+    if "created_at" in reel and reel["created_at"]:
+        reel["created_at"] = reel["created_at"].isoformat()
+    reel["is_liked"] = current_user.user_id in reel.get("likes", [])
+    reel["likes_count"] = len(reel.get("likes", []))
+    reel["views"] = reel.get("views", 0) + 1
+    
+    return reel
+
+@api_router.get("/reels/{reel_id}/video")
+async def get_reel_video(reel_id: str):
+    """Get reel video file"""
+    from fastapi.responses import FileResponse
+    
+    reel = await db.reels.find_one({"reel_id": reel_id}, {"_id": 0})
+    if not reel:
+        raise HTTPException(status_code=404, detail="Reel not found")
+    
+    video_path = REELS_DIR / reel["video_filename"]
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail="Video file not found")
+    
+    return FileResponse(video_path, media_type="video/mp4")
+
+@api_router.get("/reels/{reel_id}/thumbnail")
+async def get_reel_thumbnail(reel_id: str):
+    """Get reel thumbnail"""
+    from fastapi.responses import FileResponse
+    
+    reel = await db.reels.find_one({"reel_id": reel_id}, {"_id": 0})
+    if not reel:
+        raise HTTPException(status_code=404, detail="Reel not found")
+    
+    thumb_path = REELS_DIR / reel.get("thumbnail_filename", "")
+    if not thumb_path.exists():
+        raise HTTPException(status_code=404, detail="Thumbnail not found")
+    
+    return FileResponse(thumb_path, media_type="image/jpeg")
+
+@api_router.post("/reels/{reel_id}/like")
+async def like_reel(
+    reel_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Like a reel"""
+    reel = await db.reels.find_one({"reel_id": reel_id})
+    if not reel:
+        raise HTTPException(status_code=404, detail="Reel not found")
+    
+    if current_user.user_id in reel.get("likes", []):
+        # Unlike
+        await db.reels.update_one(
+            {"reel_id": reel_id},
+            {"$pull": {"likes": current_user.user_id}}
+        )
+        return {"message": "Unliked", "liked": False}
+    else:
+        # Like
+        await db.reels.update_one(
+            {"reel_id": reel_id},
+            {"$addToSet": {"likes": current_user.user_id}}
+        )
+        return {"message": "Liked", "liked": True}
+
+@api_router.delete("/reels/{reel_id}")
+async def delete_reel(
+    reel_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Delete a reel"""
+    reel = await db.reels.find_one({"reel_id": reel_id})
+    
+    if not reel:
+        raise HTTPException(status_code=404, detail="Reel not found")
+    
+    if reel["user_id"] != current_user.user_id:
+        raise HTTPException(status_code=403, detail="You can only delete your own reels")
+    
+    # Delete files
+    video_path = REELS_DIR / reel["video_filename"]
+    thumb_path = REELS_DIR / reel.get("thumbnail_filename", "")
+    
+    if video_path.exists():
+        video_path.unlink()
+    if thumb_path.exists():
+        thumb_path.unlink()
+    
+    # Delete from database
+    await db.reels.delete_one({"reel_id": reel_id})
+    
+    return {"message": "Reel deleted successfully"}
+
 # ==================== MOUNT SOCKET.IO ====================
 
 # Include the router in the main app
