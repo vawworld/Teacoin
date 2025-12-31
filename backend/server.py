@@ -1400,6 +1400,26 @@ async def create_conversation(
     
     await db.conversations.insert_one(conversation.copy())
     
+    # For direct conversations, check if this is a message request
+    if conv.type == "direct" and len(conv.participant_ids) == 1:
+        other_user_id = conv.participant_ids[0]
+        
+        # Check if the other person follows me (if they do, no message request needed)
+        they_follow_me = await db.follows.find_one({
+            "follower_id": other_user_id,
+            "following_id": current_user.user_id
+        })
+        
+        # If they don't follow me, create a message request
+        if not they_follow_me:
+            await db.message_requests.insert_one({
+                "conversation_id": conversation_id,
+                "requester_id": current_user.user_id,
+                "recipient_id": other_user_id,
+                "status": "pending",
+                "created_at": datetime.now(timezone.utc)
+            })
+    
     # Return without _id
     conversation["created_at"] = conversation["created_at"].isoformat()
     return conversation
