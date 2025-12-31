@@ -1535,33 +1535,105 @@ async def get_global_chat(current_user: User = Depends(require_auth)):
         {"_id": 0}
     ).sort("timestamp", -1).limit(100).to_list(100)
     
-    # Return in chronological order
+    # Convert timestamps and return in chronological order
+    for msg in messages:
+        if "timestamp" in msg and msg["timestamp"]:
+            if not isinstance(msg["timestamp"], str):
+                msg["timestamp"] = msg["timestamp"].isoformat()
+    
     return list(reversed(messages))
+
+@api_router.get("/chat/global/users")
+async def get_global_chat_users(current_user: User = Depends(require_auth)):
+    """Get list of users for @mentions in global chat"""
+    users = await db.users.find(
+        {},
+        {"_id": 0, "user_id": 1, "name": 1, "picture": 1, "profession": 1}
+    ).to_list(100)
+    
+    return users
 
 @api_router.post("/chat/global")
 async def send_global_message(
     message: dict,
     current_user: User = Depends(require_auth)
 ):
-    """Send a message to global chat"""
+    """Send a message to global chat with mentions and reply support"""
     content = message.get("content", "").strip()
     if not content:
         raise HTTPException(status_code=400, detail="Message content is required")
     
     msg_id = f"gmsg_{uuid.uuid4().hex[:12]}"
+    
+    # Extract mentions from content (format: @user_id or just detect @username)
+    mentions = message.get("mentions", [])  # List of user_ids
+    
+    # Reply to another message
+    reply_to = message.get("reply_to")  # { message_id, sender_name, content }
+    
     new_message = {
         "message_id": msg_id,
         "sender_id": current_user.user_id,
         "sender_name": current_user.name,
         "sender_picture": current_user.picture,
         "content": content,
+        "mentions": mentions,
+        "reply_to": reply_to,
         "timestamp": datetime.now(timezone.utc)
     }
     
     await db.global_messages.insert_one(new_message.copy())
+    
+    # Create notifications for mentioned users
+    if mentions:
+        for mentioned_user_id in mentions:
+            if mentioned_user_id != current_user.user_id:  # Don't notify yourself
+                await db.notifications.insert_one({
+                    "notification_id": f"notif_{uuid.uuid4().hex[:12]}",
+                    "user_id": mentioned_user_id,
+                    "type": "mention",
+                    "from_user_id": current_user.user_id,
+                    "from_user_name": current_user.name,
+                    "message_id": msg_id,
+                    "content": content[:100],  # Preview
+                    "read": False,
+                    "created_at": datetime.now(timezone.utc)
+                })
+    
     new_message["timestamp"] = new_message["timestamp"].isoformat()
     
     return new_message
+
+@api_router.get("/notifications")
+async def get_notifications(current_user: User = Depends(require_auth)):
+    """Get user's notifications (mentions, etc.)"""
+    notifications = await db.notifications.find(
+        {"user_id": current_user.user_id},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    for notif in notifications:
+        if "created_at" in notif and notif["created_at"]:
+            notif["created_at"] = notif["created_at"].isoformat()
+    
+    return notifications
+
+@api_router.get("/notifications/unread/count")
+async def get_unread_notifications_count(current_user: User = Depends(require_auth)):
+    """Get count of unread notifications"""
+    count = await db.notifications.count_documents({
+        "user_id": current_user.user_id,
+        "read": False
+    })
+    return {"count": count}
+
+@api_router.post("/notifications/mark-read")
+async def mark_notifications_read(current_user: User = Depends(require_auth)):
+    """Mark all notifications as read"""
+    await db.notifications.update_many(
+        {"user_id": current_user.user_id, "read": False},
+        {"$set": {"read": True}}
+    )
 
 # ==================== CONVERSATION ROUTES ====================
 
