@@ -178,13 +178,42 @@ export default function ChatsScreen() {
           <Text style={styles.headerSubtitle}>Welcome back</Text>
           <Text style={styles.headerTitle}>Messages</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.createButton}
-          onPress={() => router.push('/app/create-group')}
-        >
-          <Ionicons name="create-outline" size={22} color={COLORS.white} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.headerBtn}
+            onPress={() => router.push('/app/message-requests')}
+          >
+            <Ionicons name="mail-outline" size={22} color={COLORS.primary} />
+            {requestCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{requestCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.createButton}
+            onPress={() => router.push('/app/create-group')}
+          >
+            <Ionicons name="create-outline" size={22} color={COLORS.white} />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Global Chat Card */}
+      <TouchableOpacity 
+        style={styles.globalChatCard}
+        onPress={() => router.push('/app/global-chat')}
+        activeOpacity={0.8}
+      >
+        <View style={styles.globalChatIcon}>
+          <Ionicons name="globe" size={28} color={COLORS.white} />
+        </View>
+        <View style={styles.globalChatInfo}>
+          <Text style={styles.globalChatTitle}>🍵 TEAFRIENDS Community</Text>
+          <Text style={styles.globalChatSubtitle}>Chat with everyone • Tap to join</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={24} color={COLORS.textLight} />
+      </TouchableOpacity>
 
       {conversations.length === 0 ? (
         <View style={styles.emptyState}>
