@@ -1950,8 +1950,8 @@ class ReelCreate(BaseModel):
 @api_router.post("/reels/upload")
 async def upload_reel(
     file: UploadFile = File(...),
-    visibility: str = "public",
-    caption: str = "",
+    visibility: str = Form("public"),
+    caption: str = Form(""),
     current_user: User = Depends(require_auth)
 ):
     """Upload and compress a video reel (max 60 seconds)"""
