@@ -171,8 +171,9 @@ export default function ReelsScreen() {
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `video/${match[1]}` : 'video/mp4';
       
+      // For React Native, we need to use the full URI
       formData.append('file', {
-        uri: Platform.OS === 'ios' ? videoUri.replace('file://', '') : videoUri,
+        uri: videoUri,
         name: filename,
         type: type,
       } as any);
@@ -182,12 +183,13 @@ export default function ReelsScreen() {
 
       setUploadProgress('Uploading & compressing...');
       console.log('Starting upload to:', `${BACKEND_URL}/api/reels/upload`);
+      console.log('Video URI:', videoUri);
 
       const response = await fetch(`${BACKEND_URL}/api/reels/upload`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${sessionToken}`,
-          'Content-Type': 'multipart/form-data',
+          // Don't set Content-Type for FormData - fetch will set it with boundary
         },
         body: formData,
       });
