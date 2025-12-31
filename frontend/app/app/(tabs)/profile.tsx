@@ -193,31 +193,53 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* Friends Stats */}
-          <View style={styles.statsRow}>
+          {/* Friends Stats - Tappable with avatars */}
+          <TouchableOpacity 
+            style={styles.friendsSection}
+            onPress={() => setShowFriendsModal(true)}
+            activeOpacity={0.8}
+          >
+            {friends.length > 0 ? (
+              <>
+                <View style={styles.friendAvatars}>
+                  {friends.slice(0, 5).map((friend, index) => (
+                    <Image
+                      key={friend.user_id}
+                      source={{ uri: friend.picture || 'https://via.placeholder.com/40' }}
+                      style={[
+                        styles.friendAvatar,
+                        { marginLeft: index > 0 ? -12 : 0, zIndex: 5 - index }
+                      ]}
+                    />
+                  ))}
+                  {friends.length > 5 && (
+                    <View style={[styles.friendAvatar, styles.friendAvatarMore, { marginLeft: -12 }]}>
+                      <Text style={styles.friendAvatarMoreText}>+{friends.length - 5}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.friendsCountText}>
+                  {friends.length} {friends.length === 1 ? 'Friend' : 'Friends'}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.noFriendsText}>No friends yet • Tap to find friends</Text>
+            )}
+            <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+
+          {/* Friend Requests Badge */}
+          {friendRequestCount > 0 && (
             <TouchableOpacity 
-              style={styles.statItem}
+              style={styles.requestsBadge}
               onPress={() => router.push('/app/friend-requests')}
             >
-              <Text style={styles.statNumber}>{followCounts.followers}</Text>
-              <Text style={styles.statLabel}>Friends</Text>
+              <Ionicons name="person-add" size={16} color={COLORS.white} />
+              <Text style={styles.requestsBadgeText}>
+                {friendRequestCount} pending {friendRequestCount === 1 ? 'request' : 'requests'}
+              </Text>
             </TouchableOpacity>
-            {friendRequestCount > 0 && (
-              <>
-                <View style={styles.statDivider} />
-                <TouchableOpacity 
-                  style={styles.statItem}
-                  onPress={() => router.push('/app/friend-requests')}
-                >
-                  <View style={styles.requestBadge}>
-                    <Text style={styles.statNumber}>{friendRequestCount}</Text>
-                    <View style={styles.notificationDot} />
-                  </View>
-                  <Text style={styles.statLabel}>Requests</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+          )}
         </View>
       </LinearGradient>
 
