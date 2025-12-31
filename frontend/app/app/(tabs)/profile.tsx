@@ -8,6 +8,8 @@ import {
   ScrollView,
   Alert,
   RefreshControl,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -50,6 +52,14 @@ interface SellerRequest {
 interface FollowCounts {
   followers: number;
   following: number;
+}
+
+interface Friend {
+  user_id: string;
+  name: string;
+  picture?: string;
+  profession?: string;
+  online?: boolean;
 }
 
 export default function ProfileScreen() {
