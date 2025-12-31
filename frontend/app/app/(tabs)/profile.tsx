@@ -372,6 +372,72 @@ export default function ProfileScreen() {
         <Text style={styles.footerText}>TEAFRIENDS v1.0</Text>
         <Text style={styles.footerSubtext}>Made with 🍵 for tea lovers</Text>
       </View>
+
+      {/* Friends Modal */}
+      <Modal
+        visible={showFriendsModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowFriendsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Friends ({friends.length})</Text>
+              <TouchableOpacity 
+                style={styles.modalClose}
+                onPress={() => setShowFriendsModal(false)}
+              >
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+            
+            {friends.length === 0 ? (
+              <View style={styles.emptyFriends}>
+                <Ionicons name="people-outline" size={48} color={COLORS.textLight} />
+                <Text style={styles.emptyFriendsText}>No friends yet</Text>
+                <TouchableOpacity 
+                  style={styles.findFriendsButton}
+                  onPress={() => {
+                    setShowFriendsModal(false);
+                    router.push('/app/(tabs)/search');
+                  }}
+                >
+                  <Text style={styles.findFriendsText}>Find Friends</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <FlatList
+                data={friends}
+                keyExtractor={(item) => item.user_id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity 
+                    style={styles.friendItem}
+                    onPress={() => {
+                      setShowFriendsModal(false);
+                      router.push(`/app/user/${item.user_id}`);
+                    }}
+                  >
+                    <Image
+                      source={{ uri: item.picture || 'https://via.placeholder.com/50' }}
+                      style={styles.friendItemAvatar}
+                    />
+                    <View style={styles.friendItemInfo}>
+                      <Text style={styles.friendItemName}>{item.name}</Text>
+                      {item.profession && (
+                        <Text style={styles.friendItemProfession}>#{item.profession}</Text>
+                      )}
+                    </View>
+                    {item.online && <View style={styles.onlineDot} />}
+                    <Ionicons name="chevron-forward" size={20} color={COLORS.textLight} />
+                  </TouchableOpacity>
+                )}
+                contentContainerStyle={styles.friendsList}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
