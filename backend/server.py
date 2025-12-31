@@ -2263,6 +2263,90 @@ async def delete_reel(
     
     return {"message": "Reel deleted successfully"}
 
+# ==================== REEL COMMENTS ====================
+
+@api_router.get("/reels/{reel_id}/comments")
+async def get_reel_comments(
+    reel_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Get comments for a reel"""
+    reel = await db.reels.find_one({"reel_id": reel_id})
+    if not reel:
+        raise HTTPException(status_code=404, detail="Reel not found")
+    
+    comments = await db.reel_comments.find(
+        {"reel_id": reel_id},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(100).to_list(100)
+    
+    for comment in comments:
+        if "created_at" in comment and comment["created_at"]:
+            comment["created_at"] = comment["created_at"].isoformat()
+    
+    return comments
+
+@api_router.post("/reels/{reel_id}/comments")
+async def add_reel_comment(
+    reel_id: str,
+    comment_data: dict,
+    current_user: User = Depends(require_auth)
+):
+    """Add a comment to a reel"""
+    reel = await db.reels.find_one({"reel_id": reel_id})
+    if not reel:
+        raise HTTPException(status_code=404, detail="Reel not found")
+    
+    content = comment_data.get("content", "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Comment content is required")
+    
+    comment = {
+        "comment_id": f"comment_{uuid.uuid4().hex[:12]}",
+        "reel_id": reel_id,
+        "user_id": current_user.user_id,
+        "user_name": current_user.name,
+        "user_picture": current_user.picture,
+        "content": content,
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    await db.reel_comments.insert_one(comment.copy())
+    
+    # Update comment count on reel
+    await db.reels.update_one(
+        {"reel_id": reel_id},
+        {"$inc": {"comments_count": 1}}
+    )
+    
+    comment["created_at"] = comment["created_at"].isoformat()
+    return comment
+
+@api_router.delete("/reels/{reel_id}/comments/{comment_id}")
+async def delete_reel_comment(
+    reel_id: str,
+    comment_id: str,
+    current_user: User = Depends(require_auth)
+):
+    """Delete a comment"""
+    comment = await db.reel_comments.find_one({"comment_id": comment_id})
+    
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    if comment["user_id"] != current_user.user_id:
+        raise HTTPException(status_code=403, detail="You can only delete your own comments")
+    
+    await db.reel_comments.delete_one({"comment_id": comment_id})
+    
+    # Decrement comment count
+    await db.reels.update_one(
+        {"reel_id": reel_id},
+        {"$inc": {"comments_count": -1}}
+    )
+    
+    return {"message": "Comment deleted"}
+
 # ==================== MOUNT SOCKET.IO ====================
 
 # Include the router in the main app
