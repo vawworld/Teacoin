@@ -168,6 +168,20 @@ class CreateOrder(BaseModel):
 class UpdateOrderStatus(BaseModel):
     status: str  # "preparing", "ready", "delivered"
 
+# ==================== FOLLOW & MESSAGE REQUEST MODELS ====================
+
+class Follow(BaseModel):
+    follower_id: str
+    following_id: str
+    created_at: datetime
+
+class MessageRequest(BaseModel):
+    conversation_id: str
+    requester_id: str
+    recipient_id: str
+    status: str  # "pending", "accepted", "declined"
+    created_at: datetime
+
 class Transaction(BaseModel):
     transaction_id: str
     from_user_id: Optional[str]  # None for signup bonus
