@@ -438,6 +438,17 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
+  requestBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  notificationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF5722',
+  },
   teacoinsContainer: {
     paddingHorizontal: 20,
     marginTop: -25,
