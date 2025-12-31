@@ -392,6 +392,34 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: '600',
   },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  statItem: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.white,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
   teacoinsContainer: {
     paddingHorizontal: 20,
     marginTop: -25,
