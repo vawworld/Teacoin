@@ -14,8 +14,10 @@ import { useSocket } from '../../../contexts/SocketContext';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow } from 'date-fns';
+import Constants from 'expo-constants';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
+                    process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 // TEAFRIENDS Brand Colors
 const COLORS = {
