@@ -57,6 +57,7 @@ export default function ChatsScreen() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [requestCount, setRequestCount] = useState(0);
 
   useEffect(() => {
     if (sessionToken) {
@@ -66,6 +67,7 @@ export default function ChatsScreen() {
 
   useEffect(() => {
     loadConversations();
+    loadRequestCount();
     if (socket) {
       socket.on('new_message', () => loadConversations());
     }
@@ -90,9 +92,24 @@ export default function ChatsScreen() {
     }
   };
 
+  const loadRequestCount = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/message-requests/count`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRequestCount(data.count);
+      }
+    } catch (error) {
+      console.error('Error loading request count:', error);
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     loadConversations();
+    loadRequestCount();
   };
 
   const renderConversation = ({ item }: { item: Conversation }) => {
