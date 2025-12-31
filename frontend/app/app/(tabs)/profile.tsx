@@ -180,17 +180,30 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* Follower/Following Stats */}
+          {/* Friends Stats */}
           <View style={styles.statsRow}>
-            <TouchableOpacity style={styles.statItem}>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => router.push('/app/friend-requests')}
+            >
               <Text style={styles.statNumber}>{followCounts.followers}</Text>
-              <Text style={styles.statLabel}>Followers</Text>
+              <Text style={styles.statLabel}>Friends</Text>
             </TouchableOpacity>
-            <View style={styles.statDivider} />
-            <TouchableOpacity style={styles.statItem}>
-              <Text style={styles.statNumber}>{followCounts.following}</Text>
-              <Text style={styles.statLabel}>Following</Text>
-            </TouchableOpacity>
+            {friendRequestCount > 0 && (
+              <>
+                <View style={styles.statDivider} />
+                <TouchableOpacity 
+                  style={styles.statItem}
+                  onPress={() => router.push('/app/friend-requests')}
+                >
+                  <View style={styles.requestBadge}>
+                    <Text style={styles.statNumber}>{friendRequestCount}</Text>
+                    <View style={styles.notificationDot} />
+                  </View>
+                  <Text style={styles.statLabel}>Requests</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </LinearGradient>
