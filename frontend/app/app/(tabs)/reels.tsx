@@ -35,7 +35,6 @@ const COLORS = {
   white: '#FFFFFF',
   text: '#FFFFFF',
   textLight: 'rgba(255,255,255,0.7)',
-  overlay: 'rgba(0,0,0,0.3)',
   heart: '#FF4458',
 };
 
@@ -54,10 +53,8 @@ interface Reel {
   user_name: string;
   user_picture?: string;
   video_filename: string;
-  thumbnail_filename: string;
   caption: string;
   visibility: 'public' | 'friends';
-  duration: number;
   likes_count: number;
   is_liked: boolean;
   views: number;
@@ -108,14 +105,26 @@ export default function ReelsScreen() {
   };
 
   const pickFromGallery = async () => {
+    console.log('=== GALLERY PICKER STARTED ===');
+    Alert.alert('Opening Gallery', 'Requesting permission...');
+    
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('Gallery permission status:', status);
       
-      if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Please allow access to your photo library to upload videos.');
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Denied', 
+          'Please allow access to your photo library in Settings to upload videos.'
+        );
         return;
       }
 
+      Alert.alert('Permission Granted', 'Opening gallery...');
+      setShowUploadModal(false);
+
+      // Launch picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsEditing: true,
@@ -123,29 +132,48 @@ export default function ReelsScreen() {
         videoMaxDuration: 60,
       });
 
-      console.log('Gallery picker result:', JSON.stringify(result, null, 2));
+      console.log('Gallery result:', JSON.stringify(result, null, 2));
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        console.log('Selected video:', asset.uri);
-        setShowUploadModal(false);
-        await uploadVideo(asset.uri);
+      if (result.canceled) {
+        Alert.alert('Cancelled', 'Video selection was cancelled');
+        return;
       }
-    } catch (error) {
+
+      if (result.assets && result.assets.length > 0) {
+        const videoUri = result.assets[0].uri;
+        console.log('Selected video URI:', videoUri);
+        Alert.alert('Video Selected', `URI: ${videoUri.substring(0, 50)}...`);
+        await uploadVideo(videoUri);
+      } else {
+        Alert.alert('Error', 'No video was selected');
+      }
+    } catch (error: any) {
       console.error('Gallery picker error:', error);
-      Alert.alert('Error', 'Failed to pick video from gallery');
+      Alert.alert('Gallery Error', error.message || 'Failed to open gallery');
     }
   };
 
   const recordWithCamera = async () => {
+    console.log('=== CAMERA RECORDER STARTED ===');
+    Alert.alert('Opening Camera', 'Requesting permission...');
+    
     try {
-      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      // Request camera permission
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      console.log('Camera permission status:', status);
       
-      if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Please allow camera access to record videos.');
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Denied', 
+          'Please allow camera access in Settings to record videos.'
+        );
         return;
       }
 
+      Alert.alert('Permission Granted', 'Opening camera...');
+      setShowUploadModal(false);
+
+      // Launch camera
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsEditing: true,
@@ -155,34 +183,51 @@ export default function ReelsScreen() {
 
       console.log('Camera result:', JSON.stringify(result, null, 2));
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        console.log('Recorded video:', asset.uri);
-        setShowUploadModal(false);
-        await uploadVideo(asset.uri);
+      if (result.canceled) {
+        Alert.alert('Cancelled', 'Recording was cancelled');
+        return;
       }
-    } catch (error) {
+
+      if (result.assets && result.assets.length > 0) {
+        const videoUri = result.assets[0].uri;
+        console.log('Recorded video URI:', videoUri);
+        Alert.alert('Video Recorded', `URI: ${videoUri.substring(0, 50)}...`);
+        await uploadVideo(videoUri);
+      } else {
+        Alert.alert('Error', 'No video was recorded');
+      }
+    } catch (error: any) {
       console.error('Camera error:', error);
-      Alert.alert('Error', 'Failed to record video');
+      Alert.alert('Camera Error', error.message || 'Failed to open camera');
     }
   };
 
   const uploadVideo = async (videoUri: string) => {
+    console.log('=== UPLOAD STARTED ===');
+    console.log('Video URI:', videoUri);
+    
     setUploading(true);
-    setUploadProgress('Preparing video...');
+    setUploadProgress('Checking file...');
 
     try {
-      // Get file info
+      // Check if file exists
       const fileInfo = await FileSystem.getInfoAsync(videoUri);
-      console.log('File info:', fileInfo);
+      console.log('File info:', JSON.stringify(fileInfo, null, 2));
 
       if (!fileInfo.exists) {
-        throw new Error('Video file does not exist');
+        Alert.alert('Error', 'Video file not found');
+        setUploading(false);
+        return;
       }
 
-      setUploadProgress('Uploading video...');
+      const fileSizeMB = (fileInfo.size || 0) / (1024 * 1024);
+      setUploadProgress(`Uploading (${fileSizeMB.toFixed(1)} MB)...`);
+      Alert.alert('Uploading', `File size: ${fileSizeMB.toFixed(1)} MB. This may take a moment...`);
 
-      // Use FileSystem.uploadAsync for reliable uploads
+      console.log('Starting upload to:', `${BACKEND_URL}/api/reels/upload`);
+      console.log('Session token:', sessionToken ? 'Present' : 'Missing');
+
+      // Upload using FileSystem.uploadAsync
       const uploadResult = await FileSystem.uploadAsync(
         `${BACKEND_URL}/api/reels/upload`,
         videoUri,
@@ -200,25 +245,27 @@ export default function ReelsScreen() {
         }
       );
 
-      console.log('Upload result:', uploadResult);
+      console.log('Upload response status:', uploadResult.status);
+      console.log('Upload response body:', uploadResult.body);
 
       if (uploadResult.status === 200 || uploadResult.status === 201) {
-        Alert.alert('Success! 🎬', 'Your reel has been uploaded and is being processed!');
+        Alert.alert('Success! 🎬', 'Your reel has been uploaded!');
         setCaption('');
         setVisibility('public');
         loadReels();
       } else {
-        console.error('Upload failed:', uploadResult.body);
-        let errorMessage = 'Failed to upload video';
+        let errorMsg = 'Upload failed';
         try {
           const errorData = JSON.parse(uploadResult.body);
-          errorMessage = errorData.detail || errorMessage;
-        } catch (e) {}
-        Alert.alert('Upload Failed', errorMessage);
+          errorMsg = JSON.stringify(errorData.detail || errorData, null, 2);
+        } catch (e) {
+          errorMsg = uploadResult.body || 'Unknown error';
+        }
+        Alert.alert('Upload Failed', errorMsg);
       }
     } catch (error: any) {
       console.error('Upload error:', error);
-      Alert.alert('Upload Error', error.message || 'Failed to upload video. Please try again.');
+      Alert.alert('Upload Error', error.message || 'Failed to upload video');
     } finally {
       setUploading(false);
       setUploadProgress('');
@@ -263,8 +310,7 @@ export default function ReelsScreen() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setComments(data);
+        setComments(await response.json());
       }
     } catch (error) {
       console.error('Error loading comments:', error);
@@ -349,7 +395,7 @@ export default function ReelsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Upload Progress */}
+      {/* Upload Progress Banner */}
       {uploading && (
         <View style={styles.uploadingBanner}>
           <ActivityIndicator size="small" color={COLORS.white} />
@@ -393,13 +439,13 @@ export default function ReelsScreen() {
         animationType="slide"
         onRequestClose={() => setShowUploadModal(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowUploadModal(false)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Create Reel</Text>
-            <Text style={styles.modalSubtitle}>Max 60 seconds • Auto-compressed</Text>
+            <Text style={styles.modalSubtitle}>Max 60 seconds</Text>
 
-            {/* Caption Input */}
+            {/* Caption */}
             <TextInput
               style={styles.captionInput}
               placeholder="Add a caption..."
@@ -410,81 +456,53 @@ export default function ReelsScreen() {
               maxLength={200}
             />
 
-            {/* Visibility Options */}
-            <View style={styles.visibilityOptions}>
+            {/* Visibility */}
+            <View style={styles.visibilityRow}>
               <TouchableOpacity
-                style={[
-                  styles.visibilityOption,
-                  visibility === 'public' && styles.visibilityOptionActive
-                ]}
+                style={[styles.visibilityBtn, visibility === 'public' && styles.visibilityBtnActive]}
                 onPress={() => setVisibility('public')}
               >
-                <Ionicons 
-                  name="globe-outline" 
-                  size={20} 
-                  color={visibility === 'public' ? COLORS.white : COLORS.primary} 
-                />
-                <Text style={[
-                  styles.visibilityText,
-                  visibility === 'public' && styles.visibilityTextActive
-                ]}>Public</Text>
+                <Ionicons name="globe-outline" size={18} color={visibility === 'public' ? '#FFF' : COLORS.primary} />
+                <Text style={[styles.visibilityText, visibility === 'public' && styles.visibilityTextActive]}>Public</Text>
               </TouchableOpacity>
-              
               <TouchableOpacity
-                style={[
-                  styles.visibilityOption,
-                  visibility === 'friends' && styles.visibilityOptionActive
-                ]}
+                style={[styles.visibilityBtn, visibility === 'friends' && styles.visibilityBtnActive]}
                 onPress={() => setVisibility('friends')}
               >
-                <Ionicons 
-                  name="people-outline" 
-                  size={20} 
-                  color={visibility === 'friends' ? COLORS.white : COLORS.primary} 
-                />
-                <Text style={[
-                  styles.visibilityText,
-                  visibility === 'friends' && styles.visibilityTextActive
-                ]}>Friends Only</Text>
+                <Ionicons name="people-outline" size={18} color={visibility === 'friends' ? '#FFF' : COLORS.primary} />
+                <Text style={[styles.visibilityText, visibility === 'friends' && styles.visibilityTextActive]}>Friends</Text>
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity 
-              style={styles.modalOption}
-              onPress={pickFromGallery}
-            >
-              <View style={styles.modalOptionIcon}>
-                <Ionicons name="images" size={28} color={COLORS.primary} />
+            {/* Gallery Option */}
+            <TouchableOpacity style={styles.optionBtn} onPress={pickFromGallery}>
+              <View style={[styles.optionIcon, { backgroundColor: '#E3F2FD' }]}>
+                <Ionicons name="images" size={28} color="#1976D2" />
               </View>
-              <View style={styles.modalOptionInfo}>
-                <Text style={styles.modalOptionTitle}>Choose from Gallery</Text>
-                <Text style={styles.modalOptionSubtitle}>Select a video from your phone</Text>
+              <View style={styles.optionInfo}>
+                <Text style={styles.optionTitle}>Choose from Gallery</Text>
+                <Text style={styles.optionDesc}>Select a video from your phone</Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="#8B7355" />
+              <Ionicons name="chevron-forward" size={24} color="#999" />
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.modalOption}
-              onPress={recordWithCamera}
-            >
-              <View style={[styles.modalOptionIcon, { backgroundColor: '#FFEBEE' }]}>
+            {/* Camera Option */}
+            <TouchableOpacity style={styles.optionBtn} onPress={recordWithCamera}>
+              <View style={[styles.optionIcon, { backgroundColor: '#FFEBEE' }]}>
                 <Ionicons name="videocam" size={28} color="#E53935" />
               </View>
-              <View style={styles.modalOptionInfo}>
-                <Text style={styles.modalOptionTitle}>Record Video</Text>
-                <Text style={styles.modalOptionSubtitle}>Use camera to record (max 60s)</Text>
+              <View style={styles.optionInfo}>
+                <Text style={styles.optionTitle}>Record Video</Text>
+                <Text style={styles.optionDesc}>Use camera to record (max 60s)</Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="#8B7355" />
+              <Ionicons name="chevron-forward" size={24} color="#999" />
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.cancelButton}
-              onPress={() => setShowUploadModal(false)}
-            >
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowUploadModal(false)}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       {/* Comments Modal */}
@@ -495,36 +513,24 @@ export default function ReelsScreen() {
         onRequestClose={() => setShowComments(false)}
       >
         <KeyboardAvoidingView 
-          style={styles.commentsModalOverlay}
+          style={styles.commentsOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <Pressable 
-            style={styles.commentsBackdrop} 
-            onPress={() => setShowComments(false)} 
-          />
-          <View style={styles.commentsModalContent}>
+          <Pressable style={styles.commentsBackdrop} onPress={() => setShowComments(false)} />
+          <View style={styles.commentsContent}>
             <View style={styles.commentsHeader}>
-              <View style={styles.commentsHandle} />
-              <Text style={styles.commentsTitle}>
-                Comments {selectedReel && `(${selectedReel.comments_count || 0})`}
-              </Text>
-              <TouchableOpacity 
-                style={styles.closeCommentsBtn}
-                onPress={() => setShowComments(false)}
-              >
-                <Ionicons name="close" size={24} color="#2D1810" />
+              <Text style={styles.commentsTitle}>Comments ({selectedReel?.comments_count || 0})</Text>
+              <TouchableOpacity onPress={() => setShowComments(false)}>
+                <Ionicons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
 
             {loadingComments ? (
-              <View style={styles.commentsLoading}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
-              </View>
+              <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
             ) : comments.length === 0 ? (
               <View style={styles.noComments}>
-                <Ionicons name="chatbubble-outline" size={48} color="#8B7355" />
+                <Ionicons name="chatbubble-outline" size={48} color="#999" />
                 <Text style={styles.noCommentsText}>No comments yet</Text>
-                <Text style={styles.noCommentsSubtext}>Be the first to comment!</Text>
               </View>
             ) : (
               <FlatList
@@ -536,38 +542,30 @@ export default function ReelsScreen() {
                       source={{ uri: item.user_picture || 'https://via.placeholder.com/40' }}
                       style={styles.commentAvatar}
                     />
-                    <View style={styles.commentContent}>
-                      <Text style={styles.commentUserName}>{item.user_name}</Text>
+                    <View style={styles.commentBody}>
+                      <Text style={styles.commentName}>{item.user_name}</Text>
                       <Text style={styles.commentText}>{item.content}</Text>
                     </View>
                   </View>
                 )}
-                contentContainerStyle={styles.commentsList}
-                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ padding: 16 }}
               />
             )}
 
-            {/* Comment Input */}
-            <View style={styles.commentInputContainer}>
-              <Image
-                source={{ uri: user?.picture || 'https://via.placeholder.com/36' }}
-                style={styles.myCommentAvatar}
-              />
+            <View style={styles.commentInputRow}>
               <TextInput
                 style={styles.commentInput}
                 placeholder="Add a comment..."
-                placeholderTextColor="#8B7355"
                 value={newComment}
                 onChangeText={setNewComment}
-                multiline
                 maxLength={500}
               />
               <TouchableOpacity 
-                style={[styles.sendCommentBtn, !newComment.trim() && styles.sendCommentBtnDisabled]}
+                style={[styles.sendBtn, !newComment.trim() && styles.sendBtnDisabled]}
                 onPress={postComment}
                 disabled={!newComment.trim()}
               >
-                <Ionicons name="send" size={18} color={COLORS.white} />
+                <Ionicons name="send" size={18} color="#FFF" />
               </TouchableOpacity>
             </View>
           </View>
@@ -577,25 +575,9 @@ export default function ReelsScreen() {
   );
 }
 
-// Individual Reel Item Component
-function ReelItem({ 
-  reel, 
-  isActive, 
-  onLike, 
-  onComment,
-  onUserPress,
-  sessionToken 
-}: { 
-  reel: Reel; 
-  isActive: boolean; 
-  onLike: () => void;
-  onComment: () => void;
-  onUserPress: () => void;
-  sessionToken: string | null;
-}) {
+function ReelItem({ reel, isActive, onLike, onComment, onUserPress, sessionToken }: any) {
   const videoRef = useRef<Video>(null);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [showHeart, setShowHeart] = useState(false);
 
   React.useEffect(() => {
     if (isActive) {
@@ -616,95 +598,57 @@ function ReelItem({
     setIsPlaying(!isPlaying);
   };
 
-  const handleDoubleTap = () => {
-    if (!reel.is_liked) {
-      onLike();
-      setShowHeart(true);
-      setTimeout(() => setShowHeart(false), 800);
-    }
-  };
-
   const videoUrl = `${BACKEND_URL}/api/reels/${reel.reel_id}/video`;
 
   return (
     <View style={styles.reelContainer}>
-      <Pressable 
-        style={styles.videoContainer}
-        onPress={togglePlay}
-        onLongPress={handleDoubleTap}
-      >
+      <Pressable style={styles.videoWrapper} onPress={togglePlay}>
         <Video
           ref={videoRef}
-          source={{ 
-            uri: videoUrl,
-            headers: { Authorization: `Bearer ${sessionToken}` }
-          }}
+          source={{ uri: videoUrl, headers: { Authorization: `Bearer ${sessionToken}` } }}
           style={styles.video}
           resizeMode={ResizeMode.COVER}
           isLooping
           shouldPlay={isActive}
-          isMuted={false}
         />
-        
-        {/* Play/Pause Indicator */}
         {!isPlaying && (
           <View style={styles.playOverlay}>
-            <Ionicons name="play" size={64} color={COLORS.white} />
-          </View>
-        )}
-
-        {/* Double tap heart animation */}
-        {showHeart && (
-          <View style={styles.heartAnimation}>
-            <Ionicons name="heart" size={100} color={COLORS.heart} />
+            <Ionicons name="play" size={60} color="#FFF" />
           </View>
         )}
       </Pressable>
 
-      {/* Overlay Info */}
-      <View style={styles.reelOverlay}>
-        {/* User Info */}
-        <TouchableOpacity style={styles.userInfo} onPress={onUserPress}>
+      {/* User Info */}
+      <View style={styles.reelInfo}>
+        <TouchableOpacity style={styles.userRow} onPress={onUserPress}>
           <Image
             source={{ uri: reel.user_picture || 'https://via.placeholder.com/40' }}
             style={styles.userAvatar}
           />
           <Text style={styles.userName}>{reel.user_name}</Text>
-          {reel.visibility === 'friends' && (
-            <View style={styles.friendsBadge}>
-              <Ionicons name="people" size={12} color={COLORS.white} />
-            </View>
-          )}
         </TouchableOpacity>
-
-        {/* Caption */}
-        {reel.caption ? (
-          <Text style={styles.caption} numberOfLines={2}>{reel.caption}</Text>
-        ) : null}
+        {reel.caption ? <Text style={styles.caption}>{reel.caption}</Text> : null}
       </View>
 
-      {/* Action Buttons */}
-      <View style={styles.actionsContainer}>
-        {/* Like Button - Heart Icon */}
-        <TouchableOpacity style={styles.actionButton} onPress={onLike}>
+      {/* Actions */}
+      <View style={styles.actions}>
+        <TouchableOpacity style={styles.actionBtn} onPress={onLike}>
           <Ionicons 
             name={reel.is_liked ? "heart" : "heart-outline"} 
-            size={32} 
-            color={reel.is_liked ? COLORS.heart : COLORS.white} 
+            size={30} 
+            color={reel.is_liked ? COLORS.heart : "#FFF"} 
           />
-          <Text style={styles.actionCount}>{reel.likes_count || 0}</Text>
+          <Text style={styles.actionText}>{reel.likes_count || 0}</Text>
         </TouchableOpacity>
 
-        {/* Comment Button */}
-        <TouchableOpacity style={styles.actionButton} onPress={onComment}>
-          <Ionicons name="chatbubble-outline" size={28} color={COLORS.white} />
-          <Text style={styles.actionCount}>{reel.comments_count || 0}</Text>
+        <TouchableOpacity style={styles.actionBtn} onPress={onComment}>
+          <Ionicons name="chatbubble-outline" size={26} color="#FFF" />
+          <Text style={styles.actionText}>{reel.comments_count || 0}</Text>
         </TouchableOpacity>
 
-        {/* Views */}
-        <View style={styles.actionButton}>
-          <Ionicons name="eye-outline" size={28} color={COLORS.white} />
-          <Text style={styles.actionCount}>{reel.views || 0}</Text>
+        <View style={styles.actionBtn}>
+          <Ionicons name="eye-outline" size={26} color="#FFF" />
+          <Text style={styles.actionText}>{reel.views || 0}</Text>
         </View>
       </View>
     </View>
@@ -712,416 +656,81 @@ function ReelItem({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  loadingText: {
-    color: COLORS.textLight,
-    marginTop: 12,
-    fontSize: 16,
-  },
+  container: { flex: 1, backgroundColor: '#000' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
+  loadingText: { color: '#999', marginTop: 12, fontSize: 16 },
   header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    zIndex: 100,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingTop: 50, paddingHorizontal: 16, paddingBottom: 12,
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: COLORS.white,
-  },
-  uploadButton: {
-    padding: 4,
-  },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: '#FFF' },
+  uploadButton: { padding: 4 },
   uploadingBanner: {
-    position: 'absolute',
-    top: 100,
-    left: 20,
-    right: 20,
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    zIndex: 101,
+    position: 'absolute', top: 100, left: 20, right: 20, zIndex: 101,
+    backgroundColor: COLORS.primary, borderRadius: 12, padding: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
   },
-  uploadingText: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: COLORS.white,
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    marginTop: 8,
-    textAlign: 'center',
-  },
+  uploadingText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+  emptyText: { fontSize: 20, fontWeight: '600', color: '#FFF', marginTop: 16 },
+  emptySubtext: { fontSize: 14, color: '#999', marginTop: 8 },
   createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-    marginTop: 24,
-    gap: 8,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primary,
+    paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24, marginTop: 24, gap: 8,
   },
-  createButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  reelContainer: {
-    height: SCREEN_HEIGHT - 150,
-    width: SCREEN_WIDTH,
-    position: 'relative',
-  },
-  videoContainer: {
-    flex: 1,
-  },
-  video: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  playOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  heartAnimation: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  reelOverlay: {
-    position: 'absolute',
-    bottom: 80,
-    left: 16,
-    right: 70,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: COLORS.white,
-    marginRight: 10,
-  },
-  userName: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '600',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  friendsBadge: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 10,
-    padding: 4,
-    marginLeft: 8,
-  },
-  caption: {
-    color: COLORS.white,
-    fontSize: 14,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-    lineHeight: 20,
-  },
-  actionsContainer: {
-    position: 'absolute',
-    right: 12,
-    bottom: 100,
-    alignItems: 'center',
-    gap: 20,
-  },
-  actionButton: {
-    alignItems: 'center',
-  },
-  actionCount: {
-    color: COLORS.white,
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 4,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
+  createButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
+  
+  // Reel Item
+  reelContainer: { height: SCREEN_HEIGHT - 150, width: SCREEN_WIDTH, position: 'relative' },
+  videoWrapper: { flex: 1 },
+  video: { flex: 1, backgroundColor: '#000' },
+  playOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
+  reelInfo: { position: 'absolute', bottom: 80, left: 16, right: 70 },
+  userRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  userAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: '#FFF', marginRight: 10 },
+  userName: { color: '#FFF', fontSize: 16, fontWeight: '600', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
+  caption: { color: '#FFF', fontSize: 14, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
+  actions: { position: 'absolute', right: 12, bottom: 100, alignItems: 'center', gap: 20 },
+  actionBtn: { alignItems: 'center' },
+  actionText: { color: '#FFF', fontSize: 13, fontWeight: '600', marginTop: 4 },
+
   // Upload Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#2D1810',
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    fontSize: 13,
-    color: '#8B7355',
-    textAlign: 'center',
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  captionInput: {
-    backgroundColor: '#FFF8F0',
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 15,
-    color: '#2D1810',
-    minHeight: 60,
-    marginBottom: 16,
-    textAlignVertical: 'top',
-  },
-  visibilityOptions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  visibilityOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    gap: 8,
-  },
-  visibilityOptionActive: {
-    backgroundColor: COLORS.primary,
-  },
-  visibilityText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  visibilityTextActive: {
-    color: COLORS.white,
-  },
-  modalOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    backgroundColor: '#FFF8F0',
-    borderRadius: 16,
-    marginBottom: 12,
-  },
-  modalOptionIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#FFE4C4',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  modalOptionInfo: {
-    flex: 1,
-  },
-  modalOptionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D1810',
-  },
-  modalOptionSubtitle: {
-    fontSize: 13,
-    color: '#8B7355',
-    marginTop: 2,
-  },
-  cancelButton: {
-    alignItems: 'center',
-    padding: 16,
-    marginTop: 4,
-  },
-  cancelText: {
-    fontSize: 16,
-    color: '#8B7355',
-    fontWeight: '500',
-  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 40 },
+  modalHandle: { width: 40, height: 4, backgroundColor: '#DDD', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: '700', color: '#333', textAlign: 'center' },
+  modalSubtitle: { fontSize: 13, color: '#999', textAlign: 'center', marginTop: 4, marginBottom: 16 },
+  captionInput: { backgroundColor: '#F5F5F5', borderRadius: 12, padding: 14, fontSize: 15, minHeight: 60, marginBottom: 16, textAlignVertical: 'top' },
+  visibilityRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  visibilityBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 2, borderColor: COLORS.primary, gap: 6 },
+  visibilityBtnActive: { backgroundColor: COLORS.primary },
+  visibilityText: { fontSize: 14, fontWeight: '600', color: COLORS.primary },
+  visibilityTextActive: { color: '#FFF' },
+  optionBtn: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: '#F9F9F9', borderRadius: 16, marginBottom: 12 },
+  optionIcon: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  optionInfo: { flex: 1 },
+  optionTitle: { fontSize: 16, fontWeight: '600', color: '#333' },
+  optionDesc: { fontSize: 13, color: '#999', marginTop: 2 },
+  cancelBtn: { alignItems: 'center', padding: 16, marginTop: 8 },
+  cancelText: { fontSize: 16, color: '#999', fontWeight: '500' },
+
   // Comments Modal
-  commentsModalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  commentsBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  commentsModalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '70%',
-    minHeight: '50%',
-  },
-  commentsHeader: {
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E8DDD4',
-  },
-  commentsHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 2,
-    marginBottom: 12,
-  },
-  commentsTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#2D1810',
-  },
-  closeCommentsBtn: {
-    position: 'absolute',
-    right: 16,
-    top: 16,
-    padding: 4,
-  },
-  commentsLoading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  commentsList: {
-    padding: 16,
-  },
-  commentItem: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  commentAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  commentContent: {
-    flex: 1,
-    backgroundColor: '#FFF8F0',
-    borderRadius: 16,
-    padding: 12,
-  },
-  commentUserName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2D1810',
-    marginBottom: 4,
-  },
-  commentText: {
-    fontSize: 14,
-    color: '#3E2723',
-    lineHeight: 20,
-  },
-  noComments: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  noCommentsText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#8B7355',
-    marginTop: 12,
-  },
-  noCommentsSubtext: {
-    fontSize: 14,
-    color: '#8B7355',
-    marginTop: 4,
-  },
-  commentInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E8DDD4',
-    backgroundColor: '#FFFFFF',
-  },
-  myCommentAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 10,
-  },
-  commentInput: {
-    flex: 1,
-    backgroundColor: '#FFF8F0',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: '#2D1810',
-    maxHeight: 80,
-  },
-  sendCommentBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  sendCommentBtnDisabled: {
-    backgroundColor: '#BCAAA4',
-  },
+  commentsOverlay: { flex: 1, justifyContent: 'flex-end' },
+  commentsBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  commentsContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '70%', minHeight: '50%' },
+  commentsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#EEE' },
+  commentsTitle: { fontSize: 17, fontWeight: '700', color: '#333' },
+  noComments: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
+  noCommentsText: { fontSize: 16, color: '#999', marginTop: 12 },
+  commentItem: { flexDirection: 'row', marginBottom: 16 },
+  commentAvatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
+  commentBody: { flex: 1, backgroundColor: '#F5F5F5', borderRadius: 16, padding: 12 },
+  commentName: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 4 },
+  commentText: { fontSize: 14, color: '#555', lineHeight: 20 },
+  commentInputRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderTopWidth: 1, borderTopColor: '#EEE' },
+  commentInput: { flex: 1, backgroundColor: '#F5F5F5', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, maxHeight: 80 },
+  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', marginLeft: 8 },
+  sendBtnDisabled: { backgroundColor: '#CCC' },
 });
