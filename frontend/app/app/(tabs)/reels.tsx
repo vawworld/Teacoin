@@ -752,15 +752,19 @@ const styles = StyleSheet.create({
   },
   createButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   
-  // Full screen vertical video container (9:16 TikTok style)
+  // Full screen vertical video container - extends past tab bar
   reelContainer: { 
-    height: SCREEN_HEIGHT, 
+    height: WINDOW_HEIGHT + 100, // Extra height to go past tab bar
     width: SCREEN_WIDTH, 
     position: 'relative',
     backgroundColor: '#000',
   },
   videoWrapper: { 
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: '#000',
   },
   video: { 
@@ -768,7 +772,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   playOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
-  reelInfo: { position: 'absolute', bottom: 120, left: 16, right: 70 },
+  reelInfo: { position: 'absolute', bottom: 180, left: 16, right: 70 },
   userRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   userAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: '#FFF', marginRight: 10 },
   userNameContainer: { flex: 1 },
