@@ -26,7 +26,7 @@ async def test_socket():
             print("🔌 Socket.io disconnected")
         
         # Try to connect
-        await sio.connect("https://teasocial-preview.preview.emergentagent.com", wait_timeout=10)
+        await sio.connect("https://social-tea-app.preview.emergentagent.com", wait_timeout=10)
         await asyncio.sleep(2)
         
     except Exception as e:

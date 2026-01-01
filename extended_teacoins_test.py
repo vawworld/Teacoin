@@ -8,7 +8,7 @@ import requests
 import json
 from datetime import datetime
 
-BACKEND_URL = "https://teasocial-preview.preview.emergentagent.com/api"
+BACKEND_URL = "https://social-tea-app.preview.emergentagent.com/api"
 
 class ExtendedTeaCoinsTest:
     def __init__(self):

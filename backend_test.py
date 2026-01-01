@@ -13,7 +13,7 @@ import sys
 import os
 
 # Backend URL from frontend .env
-BACKEND_URL = "https://teasocial-preview.preview.emergentagent.com/api"
+BACKEND_URL = "https://social-tea-app.preview.emergentagent.com/api"
 
 class TeaFriendsAPITester:
     def __init__(self):
