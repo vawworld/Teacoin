@@ -27,8 +27,8 @@ import Constants from 'expo-constants';
 const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
                     process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
-// Get initial dimensions - will be updated dynamically
-const { width: INITIAL_WIDTH } = Dimensions.get('window');
+// Get initial dimensions for styles (dynamic dimensions used in components)
+const { width: INITIAL_WIDTH, height: INITIAL_HEIGHT } = Dimensions.get('window');
 
 const COLORS = {
   primary: '#8B4513',
