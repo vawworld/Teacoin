@@ -397,7 +397,7 @@ export default function ReelsScreen() {
       onComment={() => openComments(item)}
       onUserPress={() => router.push(`/app/user-reels/${item.user_id}`)}
       onDelete={() => handleDeleteReel(item.reel_id)}
-      currentUserId={user?.id}
+      currentUserId={user?.user_id}
       sessionToken={sessionToken}
     />
   );
