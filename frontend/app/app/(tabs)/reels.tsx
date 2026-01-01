@@ -157,26 +157,30 @@ export default function ReelsScreen() {
     console.log('=== CAMERA RECORDER STARTED ===');
     
     try {
-      // Request both camera and microphone permissions for video with audio
+      // Request camera permission
       const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-      const micPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
       console.log('Camera permission status:', cameraPermission.status);
-      console.log('Mic permission status:', micPermission.status);
       
       if (cameraPermission.status !== 'granted') {
         Alert.alert('Permission Denied', 'Please allow camera access to record videos.');
         return;
       }
 
+      // Request microphone permission for audio recording
+      const audioPermission = await Audio.requestPermissionsAsync();
+      console.log('Audio permission status:', audioPermission.status);
+      
+      if (audioPermission.status !== 'granted') {
+        Alert.alert('Permission Needed', 'Please allow microphone access to record audio with your video.');
+      }
+
       setShowUploadModal(false);
 
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['videos'],
-        allowsEditing: false, // Disable editing to preserve audio
-        quality: 1, // Full quality
+        allowsEditing: false,
+        quality: 1,
         videoMaxDuration: 60,
-        videoQuality: 1, // Highest quality (iOS)
       });
 
       console.log('Camera result:', JSON.stringify(result, null, 2));
