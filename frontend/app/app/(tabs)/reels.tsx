@@ -14,7 +14,6 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Pressable,
-  useWindowDimensions,
   StatusBar,
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
