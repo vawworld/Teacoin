@@ -753,37 +753,33 @@ const styles = StyleSheet.create({
   },
   createButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   
-  // Full screen vertical video container - extends past tab bar
+  // Full screen video container - video behind everything
   reelContainer: { 
-    height: WINDOW_HEIGHT + 100, // Extra height to go past tab bar
     width: SCREEN_WIDTH, 
-    position: 'relative',
+    height: WINDOW_HEIGHT,
     backgroundColor: '#000',
   },
   videoWrapper: { 
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#000',
+    ...StyleSheet.absoluteFillObject,
   },
   video: { 
-    width: '100%', 
-    height: '100%',
+    width: SCREEN_WIDTH, 
+    height: WINDOW_HEIGHT,
   },
   playOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
-  reelInfo: { position: 'absolute', bottom: 180, left: 16, right: 70 },
+  // Position user info at bottom left, OVER the video
+  reelInfo: { position: 'absolute', bottom: 100, left: 16, right: 80, zIndex: 10 },
   userRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   userAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: '#FFF', marginRight: 10 },
   userNameContainer: { flex: 1 },
-  userName: { color: '#FFF', fontSize: 16, fontWeight: '600', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
-  viewReelsHint: { color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 2, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
+  userName: { color: '#FFF', fontSize: 16, fontWeight: '600', textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
+  viewReelsHint: { color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
   ownerBadge: { backgroundColor: COLORS.primary, color: '#FFF', fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, marginLeft: 8, overflow: 'hidden' },
-  caption: { color: '#FFF', fontSize: 14, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
-  actions: { position: 'absolute', right: 12, bottom: 200, alignItems: 'center', gap: 20 },
+  caption: { color: '#FFF', fontSize: 14, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
+  // Position action buttons on right side, OVER the video
+  actions: { position: 'absolute', right: 12, bottom: 100, alignItems: 'center', gap: 16, zIndex: 10 },
   actionBtn: { alignItems: 'center' },
-  actionText: { color: '#FFF', fontSize: 13, fontWeight: '600', marginTop: 4, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
+  actionText: { color: '#FFF', fontSize: 12, fontWeight: '600', marginTop: 4, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 40 },
