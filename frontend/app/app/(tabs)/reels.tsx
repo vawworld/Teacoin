@@ -420,14 +420,12 @@ export default function ReelsScreen() {
       onDelete={() => handleDeleteReel(item.reel_id)}
       currentUserId={user?.user_id}
       sessionToken={sessionToken}
-      screenWidth={SCREEN_WIDTH}
-      screenHeight={SCREEN_HEIGHT}
     />
   );
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { width: SCREEN_WIDTH, height: SCREEN_HEIGHT }]}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>Loading Reels...</Text>
       </View>
@@ -435,7 +433,7 @@ export default function ReelsScreen() {
   }
 
   return (
-    <View style={[styles.container, { width: SCREEN_WIDTH, height: SCREEN_HEIGHT }]}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Reels</Text>
