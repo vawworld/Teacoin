@@ -701,13 +701,11 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
           left: 0,
           right: 0,
           bottom: 0,
-          justifyContent: 'center',
-          alignItems: 'center',
           backgroundColor: '#000',
         }} 
         onPress={togglePlay}
       >
-        {/* Video - object-fit: cover equivalent */}
+        {/* Video - object-fit: cover equivalent, MUST FILL ENTIRE CONTAINER */}
         <Video
           ref={videoRef}
           source={{ uri: videoUrl, headers: { Authorization: `Bearer ${sessionToken}` } }}
@@ -715,10 +713,8 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
             position: 'absolute',
             top: 0,
             left: 0,
-            right: 0,
-            bottom: 0,
-            width: screenWidth,
-            height: screenHeight,
+            width: FULL_WIDTH,
+            height: FULL_HEIGHT,
           }}
           resizeMode={ResizeMode.COVER}
           isLooping
