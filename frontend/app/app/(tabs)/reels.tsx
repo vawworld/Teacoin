@@ -27,8 +27,10 @@ import Constants from 'expo-constants';
 const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
                     process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
-// Get initial dimensions for styles (dynamic dimensions used in components)
-const { width: INITIAL_WIDTH, height: INITIAL_HEIGHT } = Dimensions.get('window');
+// CRITICAL: Use screen dimensions for true full-screen (includes status bar)
+const SCREEN_DIMS = Dimensions.get('screen');
+const FULL_WIDTH = SCREEN_DIMS.width;
+const FULL_HEIGHT = SCREEN_DIMS.height;
 
 const COLORS = {
   primary: '#8B4513',
