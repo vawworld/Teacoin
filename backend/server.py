@@ -1986,30 +1986,23 @@ async def upload_reel(
         thumbnail_filename = f"{reel_id}_thumb.jpg"
         thumbnail_path = REELS_DIR / thumbnail_filename
         
-        # FFmpeg compression command (TikTok/Reels style)
-        # - Preserve original video orientation (important for iOS videos)
-        # - Standard vertical format: 1080x1920 (9:16 aspect ratio)
-        # - H.264 codec with CRF 23 (good quality for social media)
+        # FFmpeg compression command
+        # - Preserve original video dimensions and orientation
+        # - iOS videos are auto-rotated by FFmpeg by default
+        # - H.264 codec with CRF 23 (good quality)
         # - AAC audio at 128k
         # - Max 60 seconds
-        # Video filter: auto-rotate, then scale to fit 1080x1920, pad if needed
-        video_filter = (
-            "scale=1080:1920:force_original_aspect_ratio=decrease,"
-            "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,"
-            "setsar=1"
-        )
         compress_cmd = [
             "ffmpeg", "-y",
             "-i", temp_input_path,
             "-t", str(MAX_VIDEO_DURATION),  # Limit to 60 seconds
-            "-vf", video_filter,  # 1080x1920 (9:16) with padding
+            "-vf", "scale='min(1080,iw)':'min(1920,ih)':force_original_aspect_ratio=decrease",
             "-c:v", "libx264",
             "-preset", "medium",
-            "-crf", "23",  # Quality (good for 1080p)
+            "-crf", "23",
             "-c:a", "aac",
             "-b:a", "128k",
-            "-movflags", "+faststart",  # Enable streaming
-            "-metadata:s:v:0", "rotate=0",  # Remove rotation metadata
+            "-movflags", "+faststart",
             str(output_path)
         ]
         
@@ -2019,13 +2012,13 @@ async def upload_reel(
         if result.returncode != 0:
             raise HTTPException(status_code=500, detail=f"Video compression failed: {result.stderr[:200]}")
         
-        # Generate thumbnail (9:16 vertical, 360x640)
+        # Generate thumbnail
         thumb_cmd = [
             "ffmpeg", "-y",
             "-i", str(output_path),
-            "-ss", "00:00:01",  # 1 second in
+            "-ss", "00:00:01",
             "-vframes", "1",
-            "-vf", "scale=360:640:force_original_aspect_ratio=decrease,pad=360:640:(ow-iw)/2:(oh-ih)/2:black",
+            "-vf", "scale=360:-2",
             str(thumbnail_path)
         ]
         subprocess.run(thumb_cmd, capture_output=True, timeout=30)
