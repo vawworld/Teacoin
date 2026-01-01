@@ -63,6 +63,7 @@ export default function TabsLayout() {
         name="reels"
         options={{
           title: 'Reels',
+          tabBarStyle: { display: 'none' }, // Hide tab bar in reels
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons 
