@@ -473,9 +473,23 @@ const styles = StyleSheet.create({
   },
   backButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
 
-  reelContainer: { height: SCREEN_HEIGHT - 230, width: SCREEN_WIDTH, position: 'relative' },
-  videoWrapper: { flex: 1 },
-  video: { flex: 1, backgroundColor: '#000' },
+  reelContainer: { 
+    height: SCREEN_HEIGHT - 230, 
+    width: SCREEN_WIDTH, 
+    position: 'relative',
+    backgroundColor: '#000',
+  },
+  videoWrapper: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  video: { 
+    width: SCREEN_WIDTH, 
+    height: SCREEN_HEIGHT - 230,
+    backgroundColor: '#000',
+  },
   playOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
   reelInfo: { position: 'absolute', bottom: 80, left: 16, right: 70 },
   caption: { color: '#FFF', fontSize: 14, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
