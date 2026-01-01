@@ -835,10 +835,8 @@ const styles = StyleSheet.create({
   },
   createButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   
-  // REEL CONTAINER - TRUE FULL SCREEN (100vw x 100vh equivalent)
+  // REEL CONTAINER - styles are minimal, dimensions come from props
   reelContainer: { 
-    width: SCREEN_WIDTH, 
-    height: SCREEN_HEIGHT,
     backgroundColor: '#000',
     position: 'relative',
   },
