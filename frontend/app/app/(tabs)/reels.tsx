@@ -714,9 +714,8 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingTop: 50, paddingHorizontal: 16, paddingBottom: 12,
-    backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: '#FFF' },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: '#FFF', textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 4 },
   uploadButton: { padding: 4 },
   uploadingBanner: {
     position: 'absolute', top: 100, left: 20, right: 20, zIndex: 101,
