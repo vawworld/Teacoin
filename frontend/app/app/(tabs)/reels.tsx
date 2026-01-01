@@ -775,14 +775,21 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
 }
 
 const styles = StyleSheet.create({
-  // Main container - FULL SCREEN, position fixed equivalent
+  // Main container - TRUE FULL SCREEN
   container: { 
-    flex: 1, 
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: FULL_WIDTH,
+    height: FULL_HEIGHT,
     backgroundColor: '#000',
-    position: 'relative',
   },
   loadingContainer: { 
-    flex: 1, 
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: FULL_WIDTH,
+    height: FULL_HEIGHT,
     justifyContent: 'center', 
     alignItems: 'center', 
     backgroundColor: '#000' 
