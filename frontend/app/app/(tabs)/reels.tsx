@@ -622,6 +622,7 @@ export default function ReelsScreen() {
 function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, currentUserId, sessionToken }: any) {
   const videoRef = useRef<Video>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(Platform.OS === 'web'); // Start muted on web for auto-play
   const isOwner = reel.user_id === currentUserId;
 
   React.useEffect(() => {
@@ -639,6 +640,15 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
         }
       } catch (error) {
         console.log('Video control error:', error);
+        // On web, if autoplay fails, try playing muted
+        if (Platform.OS === 'web' && isActive) {
+          try {
+            setIsMuted(true);
+            await videoRef.current?.playAsync();
+          } catch (e) {
+            console.log('Muted autoplay also failed');
+          }
+        }
       }
     };
     
@@ -653,6 +663,7 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
         await videoRef.current.pauseAsync();
         setIsPlaying(false);
       } else {
+        setIsMuted(false); // Unmute when user interacts
         await videoRef.current.playAsync();
         setIsPlaying(true);
       }
@@ -673,7 +684,7 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
           resizeMode={ResizeMode.COVER}
           isLooping
           shouldPlay={isActive}
-          isMuted={false}
+          isMuted={isMuted}
           onPlaybackStatusUpdate={(status: any) => {
             if (status.isLoaded) {
               setIsPlaying(status.isPlaying);
