@@ -727,26 +727,23 @@ const styles = StyleSheet.create({
   },
   createButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   
-  // Use full screen height with 9:16 aspect ratio container
+  // Full screen vertical video container (9:16 TikTok style)
   reelContainer: { 
-    height: SCREEN_HEIGHT - 150, 
+    height: SCREEN_HEIGHT, 
     width: SCREEN_WIDTH, 
     position: 'relative',
     backgroundColor: '#000',
   },
   videoWrapper: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center',
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: '#000',
   },
   video: { 
-    width: SCREEN_WIDTH, 
-    height: SCREEN_HEIGHT - 150,
-    backgroundColor: '#000',
+    width: '100%', 
+    height: '100%',
   },
   playOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
-  reelInfo: { position: 'absolute', bottom: 80, left: 16, right: 70 },
+  reelInfo: { position: 'absolute', bottom: 120, left: 16, right: 70 },
   userRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   userAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: '#FFF', marginRight: 10 },
   userNameContainer: { flex: 1 },
