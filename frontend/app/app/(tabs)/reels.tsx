@@ -619,26 +619,44 @@ export default function ReelsScreen() {
 
 function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, currentUserId, sessionToken }: any) {
   const videoRef = useRef<Video>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const isOwner = reel.user_id === currentUserId;
 
   React.useEffect(() => {
-    if (isActive) {
-      videoRef.current?.playAsync().catch(() => {});
-      setIsPlaying(true);
-    } else {
-      videoRef.current?.stopAsync().catch(() => {});
-      setIsPlaying(false);
-    }
+    const controlVideo = async () => {
+      if (!videoRef.current) return;
+      
+      try {
+        if (isActive) {
+          await videoRef.current.setPositionAsync(0);
+          await videoRef.current.playAsync();
+          setIsPlaying(true);
+        } else {
+          await videoRef.current.pauseAsync();
+          setIsPlaying(false);
+        }
+      } catch (error) {
+        console.log('Video control error:', error);
+      }
+    };
+    
+    controlVideo();
   }, [isActive]);
 
-  const togglePlay = () => {
-    if (isPlaying) {
-      videoRef.current?.pauseAsync();
-    } else {
-      videoRef.current?.playAsync();
+  const togglePlay = async () => {
+    if (!videoRef.current) return;
+    
+    try {
+      if (isPlaying) {
+        await videoRef.current.pauseAsync();
+        setIsPlaying(false);
+      } else {
+        await videoRef.current.playAsync();
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.log('Toggle play error:', error);
     }
-    setIsPlaying(!isPlaying);
   };
 
   const videoUrl = `${BACKEND_URL}/api/reels/${reel.reel_id}/video`;
