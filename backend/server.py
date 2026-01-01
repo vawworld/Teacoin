@@ -2062,6 +2062,7 @@ async def upload_reel(
         os.unlink(temp_input_path)
         
         # Save reel metadata to database
+        # ALL videos are normalized to 1080x1920 (9:16)
         reel_data = {
             "reel_id": reel_id,
             "user_id": current_user.user_id,
@@ -2073,6 +2074,9 @@ async def upload_reel(
             "visibility": visibility,  # "public" or "friends"
             "duration": duration,
             "file_size": file_size,
+            "width": 1080,  # Normalized width
+            "height": 1920,  # Normalized height
+            "aspect_ratio": "9:16",  # Standard Reels aspect ratio
             "likes": [],
             "comments_count": 0,
             "views": 0,
