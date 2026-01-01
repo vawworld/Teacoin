@@ -691,37 +691,40 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
 
   const videoUrl = `${BACKEND_URL}/api/reels/${reel.reel_id}/video`;
 
-  // Dynamic styles based on actual screen dimensions
-  const dynamicStyles = {
-    container: {
+  return (
+    <View style={{
       width: screenWidth,
       height: screenHeight,
       backgroundColor: '#000',
-      position: 'relative' as const,
-    },
-    videoWrapper: {
-      position: 'absolute' as const,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-    },
-    video: {
-      position: 'absolute' as const,
-      top: 0,
-      left: 0,
-      width: screenWidth,
-      height: screenHeight,
-    },
-  };
-
-  return (
-    <View style={dynamicStyles.container}>
-      <Pressable style={dynamicStyles.videoWrapper} onPress={togglePlay}>
+      overflow: 'hidden',
+    }}>
+      {/* Video Container - FULL SCREEN, position: fixed equivalent */}
+      <Pressable 
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#000',
+        }} 
+        onPress={togglePlay}
+      >
+        {/* Video - object-fit: cover equivalent */}
         <Video
           ref={videoRef}
           source={{ uri: videoUrl, headers: { Authorization: `Bearer ${sessionToken}` } }}
-          style={dynamicStyles.video}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: screenWidth,
+            height: screenHeight,
+          }}
           resizeMode={ResizeMode.COVER}
           isLooping
           shouldPlay={isActive}
@@ -739,6 +742,7 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
         )}
       </Pressable>
 
+      {/* User Info Overlay - positioned at bottom left */}
       <View style={styles.reelInfo}>
         <TouchableOpacity style={styles.userRow} onPress={onUserPress}>
           <Image source={{ uri: reel.user_picture || 'https://via.placeholder.com/40' }} style={styles.userAvatar} />
@@ -751,6 +755,7 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
         {reel.caption ? <Text style={styles.caption}>{reel.caption}</Text> : null}
       </View>
 
+      {/* Action Buttons Overlay - positioned at right side */}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.actionBtn} onPress={onLike}>
           <Ionicons name={reel.is_liked ? "heart" : "heart-outline"} size={30} color={reel.is_liked ? COLORS.heart : "#FFF"} />
