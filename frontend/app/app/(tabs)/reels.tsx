@@ -575,9 +575,10 @@ export default function ReelsScreen() {
   );
 }
 
-function ReelItem({ reel, isActive, onLike, onComment, onUserPress, sessionToken }: any) {
+function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, currentUserId, sessionToken }: any) {
   const videoRef = useRef<Video>(null);
   const [isPlaying, setIsPlaying] = useState(true);
+  const isOwner = reel.user_id === currentUserId;
 
   React.useEffect(() => {
     if (isActive) {
@@ -622,6 +623,7 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, sessionToken
         <TouchableOpacity style={styles.userRow} onPress={onUserPress}>
           <Image source={{ uri: reel.user_picture || 'https://via.placeholder.com/40' }} style={styles.userAvatar} />
           <Text style={styles.userName}>{reel.user_name}</Text>
+          {isOwner && <Text style={styles.ownerBadge}>You</Text>}
         </TouchableOpacity>
         {reel.caption ? <Text style={styles.caption}>{reel.caption}</Text> : null}
       </View>
@@ -641,6 +643,13 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, sessionToken
           <Ionicons name="eye-outline" size={26} color="#FFF" />
           <Text style={styles.actionText}>{reel.views || 0}</Text>
         </View>
+
+        {isOwner && (
+          <TouchableOpacity style={styles.actionBtn} onPress={onDelete}>
+            <Ionicons name="trash-outline" size={26} color="#FF6B6B" />
+            <Text style={[styles.actionText, { color: '#FF6B6B' }]}>Delete</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
