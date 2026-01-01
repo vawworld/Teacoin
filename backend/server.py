@@ -1986,19 +1986,26 @@ async def upload_reel(
         thumbnail_filename = f"{reel_id}_thumb.jpg"
         thumbnail_path = REELS_DIR / thumbnail_filename
         
-        # FFmpeg compression command (Handbrake-like quality)
-        # - Scale to 720p max width
-        # - H.264 codec with CRF 28 (good compression)
+        # FFmpeg compression command (TikTok/Reels style)
+        # - Standard vertical format: 1080x1920 (9:16 aspect ratio)
+        # - Scale and crop/pad to fit 9:16 aspect ratio
+        # - H.264 codec with CRF 23 (good quality for social media)
         # - AAC audio at 128k
         # - Max 60 seconds
+        # Video filter: scale to fit 1080 width, then pad to 1920 height if needed
+        video_filter = (
+            "scale=1080:1920:force_original_aspect_ratio=decrease,"
+            "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,"
+            "setsar=1"
+        )
         compress_cmd = [
             "ffmpeg", "-y",
             "-i", temp_input_path,
             "-t", str(MAX_VIDEO_DURATION),  # Limit to 60 seconds
-            "-vf", "scale='min(720,iw)':-2",  # Max 720p width
+            "-vf", video_filter,  # 1080x1920 (9:16) with padding
             "-c:v", "libx264",
             "-preset", "medium",
-            "-crf", "28",  # Quality (lower = better, 28 is good for mobile)
+            "-crf", "23",  # Quality (good for 1080p)
             "-c:a", "aac",
             "-b:a", "128k",
             "-movflags", "+faststart",  # Enable streaming
