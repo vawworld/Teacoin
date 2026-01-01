@@ -633,7 +633,10 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
       <View style={styles.reelInfo}>
         <TouchableOpacity style={styles.userRow} onPress={onUserPress}>
           <Image source={{ uri: reel.user_picture || 'https://via.placeholder.com/40' }} style={styles.userAvatar} />
-          <Text style={styles.userName}>{reel.user_name}</Text>
+          <View style={styles.userNameContainer}>
+            <Text style={styles.userName}>{reel.user_name}</Text>
+            <Text style={styles.viewReelsHint}>Tap to view all reels</Text>
+          </View>
           {isOwner && <Text style={styles.ownerBadge}>You</Text>}
         </TouchableOpacity>
         {reel.caption ? <Text style={styles.caption}>{reel.caption}</Text> : null}
