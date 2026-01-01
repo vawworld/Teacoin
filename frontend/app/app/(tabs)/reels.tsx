@@ -797,8 +797,8 @@ const styles = StyleSheet.create({
   viewReelsHint: { color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
   ownerBadge: { backgroundColor: COLORS.primary, color: '#FFF', fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, marginLeft: 8, overflow: 'hidden' },
   caption: { color: '#FFF', fontSize: 14, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
-  // Position action buttons on right side, OVER the video
-  actions: { position: 'absolute', right: 12, bottom: 100, alignItems: 'center', gap: 16, zIndex: 10 },
+  // Action buttons positioned above the tab bar
+  actions: { position: 'absolute', right: 12, bottom: 80, alignItems: 'center', gap: 16, zIndex: 10 },
   actionBtn: { alignItems: 'center' },
   actionText: { color: '#FFF', fontSize: 12, fontWeight: '600', marginTop: 4, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
 
