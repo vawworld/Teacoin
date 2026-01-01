@@ -632,10 +632,10 @@ export default function ReelsScreen() {
   );
 }
 
-function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, currentUserId, sessionToken, screenWidth, screenHeight }: any) {
+function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, currentUserId, sessionToken }: any) {
   const videoRef = useRef<Video>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(Platform.OS === 'web'); // Start muted on web for auto-play
+  const [isMuted, setIsMuted] = useState(Platform.OS === 'web');
   const isOwner = reel.user_id === currentUserId;
 
   React.useEffect(() => {
@@ -653,7 +653,6 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
         }
       } catch (error) {
         console.log('Video control error:', error);
-        // On web, if autoplay fails, try playing muted
         if (Platform.OS === 'web' && isActive) {
           try {
             setIsMuted(true);
@@ -676,7 +675,7 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
         await videoRef.current.pauseAsync();
         setIsPlaying(false);
       } else {
-        setIsMuted(false); // Unmute when user interacts
+        setIsMuted(false);
         await videoRef.current.playAsync();
         setIsPlaying(true);
       }
@@ -687,14 +686,14 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
 
   const videoUrl = `${BACKEND_URL}/api/reels/${reel.reel_id}/video`;
 
+  // INSTAGRAM-STYLE FULL SCREEN VIDEO
   return (
     <View style={{
-      width: screenWidth,
-      height: screenHeight,
+      width: FULL_WIDTH,
+      height: FULL_HEIGHT,
       backgroundColor: '#000',
-      overflow: 'hidden',
     }}>
-      {/* Video Container - FULL SCREEN, position: fixed equivalent */}
+      {/* Video Container - position: fixed equivalent, inset: 0 */}
       <Pressable 
         style={{
           position: 'absolute',
