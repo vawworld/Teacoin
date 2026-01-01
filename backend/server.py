@@ -1990,22 +1990,20 @@ async def upload_reel(
         # INSTAGRAM-STYLE VIDEO NORMALIZATION
         # ===========================================
         # ALL videos MUST be normalized to 1080x1920 (9:16 portrait)
-        # This ensures consistent playback across iPhone & Android
-        #
-        # Process:
-        # 1. Auto-rotate based on metadata (transpose=auto equivalent)
-        # 2. Scale to fit 1080 width while maintaining aspect ratio
-        # 3. Crop to exactly 1080x1920 (center crop)
-        # 4. Remove rotation metadata
-        # 5. Output H.264 for maximum compatibility
+        # 
+        # Strategy: SCALE TO FIT + PAD (not crop)
+        # - Scale video to fit INSIDE 1080x1920 while maintaining aspect ratio
+        # - Add black padding to reach exactly 1080x1920
+        # - This prevents any cropping/zoom issues
+        # - Works consistently for iPhone, Android, portrait, landscape
         
         # Video filter chain:
-        # - scale: Scale to fit 1080 width (or height for landscape)
-        # - crop: Center crop to exactly 1080x1920
-        # - setsar: Ensure square pixels
+        # 1. scale: Scale to fit within 1080x1920 (decrease = fit inside, not exceed)
+        # 2. pad: Add black bars to reach exactly 1080x1920, centered
+        # 3. setsar: Ensure square pixels
         video_filter = (
-            "scale=1080:1920:force_original_aspect_ratio=increase,"
-            "crop=1080:1920,"
+            "scale=1080:1920:force_original_aspect_ratio=decrease,"
+            "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,"
             "setsar=1"
         )
         
@@ -2013,7 +2011,7 @@ async def upload_reel(
             "ffmpeg", "-y",
             "-i", temp_input_path,
             "-t", str(MAX_VIDEO_DURATION),  # Limit to 60 seconds
-            "-vf", video_filter,  # Normalize to 1080x1920
+            "-vf", video_filter,  # Normalize to 1080x1920 with padding
             "-c:v", "libx264",
             "-preset", "medium",
             "-crf", "23",
@@ -2034,13 +2032,13 @@ async def upload_reel(
         
         logging.info(f"Video normalized successfully to 1080x1920")
         
-        # Generate thumbnail (also 9:16 aspect ratio)
+        # Generate thumbnail (also 9:16 aspect ratio with padding)
         thumb_cmd = [
             "ffmpeg", "-y",
             "-i", str(output_path),
             "-ss", "00:00:01",
             "-vframes", "1",
-            "-vf", "scale=360:640",  # 9:16 thumbnail
+            "-vf", "scale=360:640:force_original_aspect_ratio=decrease,pad=360:640:(ow-iw)/2:(oh-ih)/2:black",
             str(thumbnail_path)
         ]
         subprocess.run(thumb_cmd, capture_output=True, timeout=30)
