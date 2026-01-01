@@ -157,7 +157,8 @@ export default function ReelsScreen() {
     console.log('=== CAMERA RECORDER STARTED ===');
     
     try {
-      // Request camera permission
+      // Request camera permission only
+      // expo-image-picker handles microphone permission automatically for video recording
       const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
       console.log('Camera permission status:', cameraPermission.status);
       
@@ -166,16 +167,9 @@ export default function ReelsScreen() {
         return;
       }
 
-      // Request microphone permission for audio recording
-      const audioPermission = await Audio.requestPermissionsAsync();
-      console.log('Audio permission status:', audioPermission.status);
-      
-      if (audioPermission.status !== 'granted') {
-        Alert.alert('Permission Needed', 'Please allow microphone access to record audio with your video.');
-      }
-
       setShowUploadModal(false);
 
+      // Launch camera - microphone is handled automatically by the system
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['videos'],
         allowsEditing: false,
