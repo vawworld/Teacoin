@@ -70,10 +70,6 @@ export default function ReelsScreen() {
   const { sessionToken, user } = useAuth();
   const router = useRouter();
   
-  // CRITICAL: Use dynamic window dimensions (Instagram-style fix for mobile browsers)
-  // This handles iOS Safari URL bar and Android browser chrome
-  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
-  
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
