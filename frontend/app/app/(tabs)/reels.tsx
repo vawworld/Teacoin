@@ -691,13 +691,37 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
 
   const videoUrl = `${BACKEND_URL}/api/reels/${reel.reel_id}/video`;
 
+  // Dynamic styles based on actual screen dimensions
+  const dynamicStyles = {
+    container: {
+      width: screenWidth,
+      height: screenHeight,
+      backgroundColor: '#000',
+      position: 'relative' as const,
+    },
+    videoWrapper: {
+      position: 'absolute' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    video: {
+      position: 'absolute' as const,
+      top: 0,
+      left: 0,
+      width: screenWidth,
+      height: screenHeight,
+    },
+  };
+
   return (
-    <View style={styles.reelContainer}>
-      <Pressable style={styles.videoWrapper} onPress={togglePlay}>
+    <View style={dynamicStyles.container}>
+      <Pressable style={dynamicStyles.videoWrapper} onPress={togglePlay}>
         <Video
           ref={videoRef}
           source={{ uri: videoUrl, headers: { Authorization: `Bearer ${sessionToken}` } }}
-          style={styles.video}
+          style={dynamicStyles.video}
           resizeMode={ResizeMode.COVER}
           isLooping
           shouldPlay={isActive}
