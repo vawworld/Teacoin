@@ -770,12 +770,11 @@ const styles = StyleSheet.create({
   },
   createButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   
-  // Full screen video - absolute fill to edges
+  // Full screen video - uses screen dimensions to fill completely
   reelContainer: { 
     width: SCREEN_WIDTH, 
-    height: WINDOW_HEIGHT,
+    height: SCREEN_HEIGHT,
     backgroundColor: '#000',
-    overflow: 'hidden',
   },
   videoWrapper: { 
     position: 'absolute',
@@ -785,15 +784,12 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   video: { 
-    position: 'absolute',
-    top: 0,
-    left: 0,
     width: SCREEN_WIDTH, 
-    height: WINDOW_HEIGHT,
+    height: SCREEN_HEIGHT,
   },
   playOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
-  // Position user info at bottom left, OVER the video
-  reelInfo: { position: 'absolute', bottom: 100, left: 16, right: 80, zIndex: 10 },
+  // User info positioned above the tab bar
+  reelInfo: { position: 'absolute', bottom: 80, left: 16, right: 80, zIndex: 10 },
   userRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   userAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: '#FFF', marginRight: 10 },
   userNameContainer: { flex: 1 },
