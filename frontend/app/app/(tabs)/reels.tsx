@@ -745,18 +745,49 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
-  loadingText: { color: '#999', marginTop: 12, fontSize: 16 },
-  header: {
-    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingTop: 50, paddingHorizontal: 16, paddingBottom: 12,
+  // Main container - FULL SCREEN, position fixed equivalent
+  container: { 
+    flex: 1, 
+    backgroundColor: '#000',
+    position: 'relative',
   },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: '#FFF', textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 4 },
-  uploadButton: { padding: 4 },
+  loadingContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: '#000' 
+  },
+  loadingText: { color: '#999', marginTop: 12, fontSize: 16 },
+  
+  // Header overlay - floating on top of video
+  header: {
+    position: 'absolute', 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    zIndex: 100,
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    paddingTop: 60, // Safe area top
+    paddingHorizontal: 16, 
+    paddingBottom: 12,
+  },
+  headerTitle: { 
+    fontSize: 24, 
+    fontWeight: '700', 
+    color: '#FFF', 
+    textShadowColor: 'rgba(0,0,0,0.9)', 
+    textShadowOffset: { width: 1, height: 1 }, 
+    textShadowRadius: 6 
+  },
+  uploadButton: { 
+    padding: 8,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 20,
+  },
   uploadingBanner: {
-    position: 'absolute', top: 100, left: 20, right: 20, zIndex: 101,
+    position: 'absolute', top: 120, left: 20, right: 20, zIndex: 101,
     backgroundColor: COLORS.primary, borderRadius: 12, padding: 14,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
   },
@@ -770,26 +801,36 @@ const styles = StyleSheet.create({
   },
   createButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   
-  // Full screen video - uses screen dimensions to fill completely
+  // REEL CONTAINER - TRUE FULL SCREEN (100vw x 100vh equivalent)
   reelContainer: { 
     width: SCREEN_WIDTH, 
     height: SCREEN_HEIGHT,
     backgroundColor: '#000',
+    position: 'relative',
   },
+  // Video wrapper - absolute fill
   videoWrapper: { 
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFillObject,
   },
+  // Video - FULL SCREEN with object-fit: cover
   video: { 
-    width: SCREEN_WIDTH, 
-    height: SCREEN_HEIGHT,
+    ...StyleSheet.absoluteFillObject,
   },
-  playOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
-  // User info positioned above the tab bar
-  reelInfo: { position: 'absolute', bottom: 80, left: 16, right: 80, zIndex: 10 },
+  playOverlay: { 
+    ...StyleSheet.absoluteFillObject, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(0,0,0,0.3)' 
+  },
+  
+  // User info - OVERLAY positioned at bottom left
+  reelInfo: { 
+    position: 'absolute', 
+    bottom: 120, // Above safe area
+    left: 16, 
+    right: 100, // Leave space for action buttons
+    zIndex: 20 
+  },
   userRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   userAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: '#FFF', marginRight: 10 },
   userNameContainer: { flex: 1 },
