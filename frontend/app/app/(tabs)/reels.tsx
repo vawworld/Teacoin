@@ -650,7 +650,7 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
           ref={videoRef}
           source={{ uri: videoUrl, headers: { Authorization: `Bearer ${sessionToken}` } }}
           style={styles.video}
-          resizeMode={ResizeMode.CONTAIN}
+          resizeMode={ResizeMode.COVER}
           isLooping
           shouldPlay={isActive}
           isMuted={false}
