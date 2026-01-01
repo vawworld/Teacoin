@@ -1986,39 +1986,61 @@ async def upload_reel(
         thumbnail_filename = f"{reel_id}_thumb.jpg"
         thumbnail_path = REELS_DIR / thumbnail_filename
         
-        # FFmpeg compression command
-        # - Preserve original video dimensions and orientation
-        # - iOS videos are auto-rotated by FFmpeg by default
-        # - H.264 codec with CRF 23 (good quality)
-        # - AAC audio at 128k
-        # - Max 60 seconds
+        # ===========================================
+        # INSTAGRAM-STYLE VIDEO NORMALIZATION
+        # ===========================================
+        # ALL videos MUST be normalized to 1080x1920 (9:16 portrait)
+        # This ensures consistent playback across iPhone & Android
+        #
+        # Process:
+        # 1. Auto-rotate based on metadata (transpose=auto equivalent)
+        # 2. Scale to fit 1080 width while maintaining aspect ratio
+        # 3. Crop to exactly 1080x1920 (center crop)
+        # 4. Remove rotation metadata
+        # 5. Output H.264 for maximum compatibility
+        
+        # Video filter chain:
+        # - scale: Scale to fit 1080 width (or height for landscape)
+        # - crop: Center crop to exactly 1080x1920
+        # - setsar: Ensure square pixels
+        video_filter = (
+            "scale=1080:1920:force_original_aspect_ratio=increase,"
+            "crop=1080:1920,"
+            "setsar=1"
+        )
+        
         compress_cmd = [
             "ffmpeg", "-y",
             "-i", temp_input_path,
             "-t", str(MAX_VIDEO_DURATION),  # Limit to 60 seconds
-            "-vf", "scale='min(1080,iw)':'min(1920,ih)':force_original_aspect_ratio=decrease",
+            "-vf", video_filter,  # Normalize to 1080x1920
             "-c:v", "libx264",
             "-preset", "medium",
             "-crf", "23",
             "-c:a", "aac",
             "-b:a", "128k",
             "-movflags", "+faststart",
+            "-metadata:s:v:0", "rotate=0",  # Remove rotation metadata
             str(output_path)
         ]
         
         # Run compression
-        result = subprocess.run(compress_cmd, capture_output=True, text=True, timeout=120)
+        logging.info(f"Running FFmpeg normalization: {' '.join(compress_cmd)}")
+        result = subprocess.run(compress_cmd, capture_output=True, text=True, timeout=180)
         
         if result.returncode != 0:
+            logging.error(f"FFmpeg error: {result.stderr}")
             raise HTTPException(status_code=500, detail=f"Video compression failed: {result.stderr[:200]}")
         
-        # Generate thumbnail
+        logging.info(f"Video normalized successfully to 1080x1920")
+        
+        # Generate thumbnail (also 9:16 aspect ratio)
         thumb_cmd = [
             "ffmpeg", "-y",
             "-i", str(output_path),
             "-ss", "00:00:01",
             "-vframes", "1",
-            "-vf", "scale=360:-2",
+            "-vf", "scale=360:640",  # 9:16 thumbnail
             str(thumbnail_path)
         ]
         subprocess.run(thumb_cmd, capture_output=True, timeout=30)
