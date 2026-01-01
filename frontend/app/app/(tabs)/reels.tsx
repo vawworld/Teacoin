@@ -768,16 +768,24 @@ const styles = StyleSheet.create({
   },
   createButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   
-  // Full screen video container - video behind everything
+  // Full screen video - absolute fill to edges
   reelContainer: { 
     width: SCREEN_WIDTH, 
     height: WINDOW_HEIGHT,
     backgroundColor: '#000',
+    overflow: 'hidden',
   },
   videoWrapper: { 
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   video: { 
+    position: 'absolute',
+    top: 0,
+    left: 0,
     width: SCREEN_WIDTH, 
     height: WINDOW_HEIGHT,
   },
