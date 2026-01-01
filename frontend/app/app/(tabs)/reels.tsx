@@ -14,6 +14,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Pressable,
+  useWindowDimensions,
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -25,7 +26,8 @@ import Constants from 'expo-constants';
 const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
                     process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const WINDOW_HEIGHT = Dimensions.get('window').height;
 
 const COLORS = {
   primary: '#8B4513',
