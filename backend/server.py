@@ -1987,12 +1987,12 @@ async def upload_reel(
         thumbnail_path = REELS_DIR / thumbnail_filename
         
         # FFmpeg compression command (TikTok/Reels style)
+        # - Preserve original video orientation (important for iOS videos)
         # - Standard vertical format: 1080x1920 (9:16 aspect ratio)
-        # - Scale and crop/pad to fit 9:16 aspect ratio
         # - H.264 codec with CRF 23 (good quality for social media)
         # - AAC audio at 128k
         # - Max 60 seconds
-        # Video filter: scale to fit 1080 width, then pad to 1920 height if needed
+        # Video filter: auto-rotate, then scale to fit 1080x1920, pad if needed
         video_filter = (
             "scale=1080:1920:force_original_aspect_ratio=decrease,"
             "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,"
@@ -2009,6 +2009,7 @@ async def upload_reel(
             "-c:a", "aac",
             "-b:a", "128k",
             "-movflags", "+faststart",  # Enable streaming
+            "-metadata:s:v:0", "rotate=0",  # Remove rotation metadata
             str(output_path)
         ]
         
