@@ -478,7 +478,7 @@ export default function ReelsScreen() {
           viewabilityConfig={viewabilityConfig}
           getItemLayout={(data, index) => ({
             length: SCREEN_HEIGHT,
-            offset: WINDOW_HEIGHT * index,
+            offset: SCREEN_HEIGHT * index,
             index,
           })}
         />
