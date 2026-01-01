@@ -2018,13 +2018,13 @@ async def upload_reel(
         if result.returncode != 0:
             raise HTTPException(status_code=500, detail=f"Video compression failed: {result.stderr[:200]}")
         
-        # Generate thumbnail
+        # Generate thumbnail (9:16 vertical, 360x640)
         thumb_cmd = [
             "ffmpeg", "-y",
             "-i", str(output_path),
             "-ss", "00:00:01",  # 1 second in
             "-vframes", "1",
-            "-vf", "scale=360:-2",
+            "-vf", "scale=360:640:force_original_aspect_ratio=decrease,pad=360:640:(ow-iw)/2:(oh-ih)/2:black",
             str(thumbnail_path)
         ]
         subprocess.run(thumb_cmd, capture_output=True, timeout=30)
