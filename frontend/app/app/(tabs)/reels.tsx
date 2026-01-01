@@ -85,6 +85,16 @@ export default function ReelsScreen() {
     }, [])
   );
 
+  // Shuffle array helper function
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const loadReels = async () => {
     try {
       setLoading(true);
@@ -94,7 +104,8 @@ export default function ReelsScreen() {
 
       if (response.ok) {
         const data = await response.json();
-        setReels(data);
+        // Shuffle reels for random feed experience
+        setReels(shuffleArray(data));
       }
     } catch (error) {
       console.error('Error loading reels:', error);
