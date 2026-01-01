@@ -588,6 +588,25 @@ export default function ReelsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal visible={!!reelToDelete} transparent animationType="fade" onRequestClose={cancelDeleteReel}>
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModalContent}>
+            <Ionicons name="warning" size={48} color="#FF6B6B" style={{ marginBottom: 16 }} />
+            <Text style={styles.deleteModalTitle}>Delete Reel?</Text>
+            <Text style={styles.deleteModalText}>This action cannot be undone. Your reel will be permanently deleted.</Text>
+            <View style={styles.deleteModalButtons}>
+              <TouchableOpacity style={styles.deleteModalCancelBtn} onPress={cancelDeleteReel}>
+                <Text style={styles.deleteModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteModalConfirmBtn} onPress={confirmDeleteReel}>
+                <Text style={styles.deleteModalConfirmText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
