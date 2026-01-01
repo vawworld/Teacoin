@@ -243,7 +243,7 @@ export default function UserReelsScreen() {
       onLike={() => handleLike(item.reel_id)}
       onComment={() => openComments(item)}
       onDelete={() => handleDeleteReel(item.reel_id)}
-      currentUserId={user?.id}
+      currentUserId={user?.user_id}
       sessionToken={sessionToken}
     />
   );
