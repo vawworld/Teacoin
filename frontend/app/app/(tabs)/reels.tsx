@@ -832,16 +832,63 @@ const styles = StyleSheet.create({
     zIndex: 20 
   },
   userRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  userAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: '#FFF', marginRight: 10 },
+  userAvatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: '#FFF', marginRight: 12 },
   userNameContainer: { flex: 1 },
-  userName: { color: '#FFF', fontSize: 16, fontWeight: '600', textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
-  viewReelsHint: { color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
-  ownerBadge: { backgroundColor: COLORS.primary, color: '#FFF', fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, marginLeft: 8, overflow: 'hidden' },
-  caption: { color: '#FFF', fontSize: 14, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
-  // Action buttons positioned above the tab bar
-  actions: { position: 'absolute', right: 12, bottom: 80, alignItems: 'center', gap: 16, zIndex: 10 },
+  userName: { 
+    color: '#FFF', 
+    fontSize: 16, 
+    fontWeight: '700', 
+    textShadowColor: 'rgba(0,0,0,0.9)', 
+    textShadowOffset: { width: 1, height: 1 }, 
+    textShadowRadius: 4 
+  },
+  viewReelsHint: { 
+    color: 'rgba(255,255,255,0.8)', 
+    fontSize: 12, 
+    marginTop: 2, 
+    textShadowColor: 'rgba(0,0,0,0.9)', 
+    textShadowOffset: { width: 1, height: 1 }, 
+    textShadowRadius: 4 
+  },
+  ownerBadge: { 
+    backgroundColor: COLORS.primary, 
+    color: '#FFF', 
+    fontSize: 11, 
+    fontWeight: '700', 
+    paddingHorizontal: 8, 
+    paddingVertical: 3, 
+    borderRadius: 10, 
+    marginLeft: 8, 
+    overflow: 'hidden' 
+  },
+  caption: { 
+    color: '#FFF', 
+    fontSize: 14, 
+    textShadowColor: 'rgba(0,0,0,0.9)', 
+    textShadowOffset: { width: 1, height: 1 }, 
+    textShadowRadius: 4,
+    marginTop: 8,
+  },
+  
+  // Action buttons - OVERLAY on right side of video
+  actions: { 
+    position: 'absolute', 
+    right: 12, 
+    bottom: 120, // Same as reelInfo
+    alignItems: 'center', 
+    gap: 18, 
+    zIndex: 20 
+  },
   actionBtn: { alignItems: 'center' },
-  actionText: { color: '#FFF', fontSize: 12, fontWeight: '600', marginTop: 4, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 },
+  actionText: { 
+    color: '#FFF', 
+    fontSize: 12, 
+    fontWeight: '600', 
+    marginTop: 4, 
+    textShadowColor: 'rgba(0,0,0,0.9)', 
+    textShadowOffset: { width: 1, height: 1 }, 
+    textShadowRadius: 4 
+  },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 40 },
