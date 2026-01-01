@@ -618,10 +618,10 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
 
   React.useEffect(() => {
     if (isActive) {
-      videoRef.current?.playAsync();
+      videoRef.current?.playAsync().catch(() => {});
       setIsPlaying(true);
     } else {
-      videoRef.current?.pauseAsync();
+      videoRef.current?.stopAsync().catch(() => {});
       setIsPlaying(false);
     }
   }, [isActive]);
@@ -644,9 +644,15 @@ function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, cu
           ref={videoRef}
           source={{ uri: videoUrl, headers: { Authorization: `Bearer ${sessionToken}` } }}
           style={styles.video}
-          resizeMode={ResizeMode.CONTAIN}
+          resizeMode={ResizeMode.COVER}
           isLooping
           shouldPlay={isActive}
+          isMuted={false}
+          onPlaybackStatusUpdate={(status: any) => {
+            if (status.isLoaded) {
+              setIsPlaying(status.isPlaying);
+            }
+          }}
         />
         {!isPlaying && (
           <View style={styles.playOverlay}>
