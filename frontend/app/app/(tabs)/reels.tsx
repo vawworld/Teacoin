@@ -477,14 +477,14 @@ export default function ReelsScreen() {
           renderItem={renderReel}
           pagingEnabled
           showsVerticalScrollIndicator={false}
-          snapToInterval={SCREEN_HEIGHT}
+          snapToInterval={FULL_HEIGHT}
           snapToAlignment="start"
           decelerationRate="fast"
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
           getItemLayout={(data, index) => ({
-            length: SCREEN_HEIGHT,
-            offset: SCREEN_HEIGHT * index,
+            length: FULL_HEIGHT,
+            offset: FULL_HEIGHT * index,
             index,
           })}
         />
