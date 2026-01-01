@@ -67,6 +67,11 @@ interface Reel {
 export default function ReelsScreen() {
   const { sessionToken, user } = useAuth();
   const router = useRouter();
+  
+  // CRITICAL: Use dynamic window dimensions (Instagram-style fix for mobile browsers)
+  // This handles iOS Safari URL bar and Android browser chrome
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
+  
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -81,6 +86,12 @@ export default function ReelsScreen() {
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  // Hide status bar when viewing reels
+  useEffect(() => {
+    StatusBar.setHidden(true, 'fade');
+    return () => StatusBar.setHidden(false, 'fade');
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
