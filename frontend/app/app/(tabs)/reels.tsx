@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Pressable,
+  useWindowDimensions,
+  StatusBar,
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -25,7 +27,8 @@ import Constants from 'expo-constants';
 const BACKEND_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
                     process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('screen');
+// Get initial dimensions - will be updated dynamically
+const { width: INITIAL_WIDTH } = Dimensions.get('window');
 
 const COLORS = {
   primary: '#8B4513',
