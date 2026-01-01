@@ -636,7 +636,7 @@ export default function ReelsScreen() {
   );
 }
 
-function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, currentUserId, sessionToken }: any) {
+function ReelItem({ reel, isActive, onLike, onComment, onUserPress, onDelete, currentUserId, sessionToken, screenWidth, screenHeight }: any) {
   const videoRef = useRef<Video>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(Platform.OS === 'web'); // Start muted on web for auto-play
