@@ -690,6 +690,7 @@ const styles = StyleSheet.create({
   userRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   userAvatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: '#FFF', marginRight: 10 },
   userName: { color: '#FFF', fontSize: 16, fontWeight: '600', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
+  ownerBadge: { backgroundColor: COLORS.primary, color: '#FFF', fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, marginLeft: 8, overflow: 'hidden' },
   caption: { color: '#FFF', fontSize: 14, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 },
   actions: { position: 'absolute', right: 12, bottom: 100, alignItems: 'center', gap: 20 },
   actionBtn: { alignItems: 'center' },
