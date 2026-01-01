@@ -337,6 +337,39 @@ export default function ReelsScreen() {
     }
   };
 
+  const handleDeleteReel = async (reelId: string) => {
+    Alert.alert(
+      'Delete Reel',
+      'Are you sure you want to delete this reel? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await fetch(`${BACKEND_URL}/api/reels/${reelId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${sessionToken}` },
+              });
+
+              if (response.ok) {
+                setReels(prev => prev.filter(r => r.reel_id !== reelId));
+                Alert.alert('Deleted', 'Your reel has been deleted.');
+              } else {
+                const data = await response.json();
+                Alert.alert('Error', data.detail || 'Failed to delete reel');
+              }
+            } catch (error: any) {
+              console.error('Error deleting reel:', error);
+              Alert.alert('Error', 'Failed to delete reel');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
       setCurrentIndex(viewableItems[0].index || 0);
