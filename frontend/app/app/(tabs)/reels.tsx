@@ -787,4 +787,15 @@ const styles = StyleSheet.create({
   commentInput: { flex: 1, backgroundColor: '#F5F5F5', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, maxHeight: 80 },
   sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', marginLeft: 8 },
   sendBtnDisabled: { backgroundColor: '#CCC' },
+
+  // Delete Modal Styles
+  deleteModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  deleteModalContent: { backgroundColor: '#FFF', borderRadius: 20, padding: 24, alignItems: 'center', width: '100%', maxWidth: 320 },
+  deleteModalTitle: { fontSize: 20, fontWeight: '700', color: '#333', marginBottom: 8 },
+  deleteModalText: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
+  deleteModalButtons: { flexDirection: 'row', gap: 12, width: '100%' },
+  deleteModalCancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#F0F0F0', alignItems: 'center' },
+  deleteModalCancelText: { fontSize: 16, fontWeight: '600', color: '#666' },
+  deleteModalConfirmBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#FF4444', alignItems: 'center' },
+  deleteModalConfirmText: { fontSize: 16, fontWeight: '600', color: '#FFF' },
 });
